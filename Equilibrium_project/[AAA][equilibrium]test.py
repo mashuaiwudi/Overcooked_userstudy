@@ -161,6 +161,10 @@ for step in range(200):
     action_1, _states_1 = model_agent_1.predict(obs[1])
 
     total_action = [action_0, action_1]
+
+    print('agent action: ', shared_env.macroActionName[action_0])
+
+    
     total_action, real_execute_macro_actions = shared_env._computeLowLevelActions(
         total_action
     )
