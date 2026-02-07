@@ -10,6 +10,15 @@ import time
 import torch
 import os
 
+
+
+# —— 锁线程数，防止并行库抢核 —— #
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
+
 # ====== 全局随机种子 ======
 SEED = 42  # 你可以修改这个数字来改变随机性
 
@@ -19,6 +28,9 @@ torch.manual_seed(SEED)
 if torch.cuda.is_available():
     torch.cuda.manual_seed_all(SEED)
 
+# （可选）让 PyTorch 在 CPU 上只用 1 线程
+torch.set_num_threads(1)
+torch.set_num_interop_threads(1)
 
 
 class SingleAgentWrapper(gym.Wrapper):

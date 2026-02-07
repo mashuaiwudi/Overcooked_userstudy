@@ -103,7 +103,7 @@ class Overcooked_MA_equilibrium(Overcooked_equilibrium):
         self.macroActionItemList = []
         self._createMacroActionItemList()
 
-        self.macroActionName = ["stay", "get lettuce 1", "get lettuece 2", "get plate 1", "get plate 2", "go to knife 1", "deliver 1", "chop", "right", "down", "left", "up"]
+        self.macroActionName = ["stay", "get lettuce 1", "get lettuece 2", "get plate 1", "get plate 2", "go to knife 1", "deliver 1", "chop", "go to counter", "right", "down", "left", "up"]
 
         self.action_space = spaces.Discrete(len(self.macroActionName))
 
@@ -314,6 +314,80 @@ class Overcooked_MA_equilibrium(Overcooked_equilibrium):
                 if primitive_action == ACTIONIDX["stay"]:
                     self.macroAgent[idx].cur_macro_action_done = True
             
+
+
+
+
+
+
+            elif self.macroActionName[macro_action] == "go to counter":
+                """这里我可以改一下go to counter"""
+                # 遍历所有counter，计算每一个counter的可达性A，可达性B，距离A的距离，距离B的距离，这四个。
+                # 然后找出可达性A和B都满足，且距离A和距离B之和最小的。
+                # 然后找出里面距离A和距离B的差值的绝对值最小。
+
+
+                # print('进入')
+                
+
+
+                counter_x = []
+                counter_y = []
+
+                # 这里每次更换地图都要改
+                for x_i in [2]:
+                    for y_i in [2]:
+                        counter_x.append(x_i)
+                        counter_y.append(y_i)
+
+               
+
+                # tocounter1 = self.shortest_path_through_zeros(agent.pomap, agent.x, agent.y, 12, 7)
+                # tocounter2 = self.shortest_path_through_zeros(agent.pomap, agent.x, agent.y, 13, 7)
+
+
+                # if tocounter1 == -1 and tocounter2 != -1:
+                #     best_index = 1
+                
+                # if tocounter2 == -1 and tocounter1 != -1:
+                #     best_index = 0
+
+                # if tocounter1 == -1 and tocounter2 == -1:
+                #     best_index = None
+
+                # if tocounter1 != -1 and tocounter2 != -1 and tocounter1 <= tocounter2:
+                #     best_index = 0
+                # if tocounter1 != -1 and tocounter2 != -1 and tocounter1 > tocounter2:
+                #     best_index = 1
+
+
+                best_index = 0
+
+
+                # print('最好的counter: ', best_index)
+                if best_index is None:
+                    primitive_action = ACTIONIDX["stay"]
+                    self.macroAgent[idx].cur_macro_action_done = True
+                else:
+                    # if agent.holding and isinstance(agent.holding, Food) and ITEMNAME[agent.pomap[counter_x[best_index]][counter_y[best_index]]] != "counter":
+                    #     self.target_counter_x = counter_x[1-best_index]
+                    #     self.target_counter_y = counter_y[1-best_index]
+                    # else:
+                    #     self.target_counter_x = counter_x[best_index]
+                    #     self.target_counter_y = counter_y[best_index]
+
+                    self.target_counter_x = counter_x[best_index]
+                    self.target_counter_y = counter_y[best_index]
+
+
+                    if self._calDistance(agent.x, agent.y, self.target_counter_x, self.target_counter_y) == 1 and not agent.holding:
+                        primitive_action = ACTIONIDX["stay"]
+                        self.macroAgent[idx].cur_macro_action_done = True
+                    else:
+                        primitive_action = self._navigate(agent, self.target_counter_x, self.target_counter_y)
+                        if self._calDistance(agent.x, agent.y, self.target_counter_x, self.target_counter_y) == 1:
+                            self.macroAgent[idx].cur_macro_action_done = True
+
 
             
 

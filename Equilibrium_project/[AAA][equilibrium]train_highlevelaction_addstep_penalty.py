@@ -21,6 +21,172 @@ if torch.cuda.is_available():
 
 
 
+
+
+
+ITEMNAME = ["space", "counter", "agent", "tomato", "lettuce", "plate", "knife", "delivery", "onion", "dirtyplate", "badlettuce"]
+
+macroActionDict = {"stay": 0, "get lettuce 1": 1, "get lettuce 2": 2, "get plate 1": 3, "get plate 2": 4, "go to knife 1": 5, "deliver 1": 6, "chop": 7, "go to counter": 8, "right": 9, "down": 10, "left": 11, "up": 12}
+
+# ["stay", "get lettuce 1", "get lettuece 2", "get plate 1", "get plate 2", "go to knife 1", "deliver 1", "chop", "go to counter", "right", "down", "left", "up"]
+
+
+
+
+def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce):
+
+    agent_up = env.agent[0]
+    agent_down = env.agent[1]
+
+
+    counter1_x = 2
+    counter1_y = 2
+
+
+    counter1 = ITEMNAME[env.map[counter1_x][counter1_y]]
+
+
+    reward_shaping_bonus = 0
+    total_reward_bonus = 0
+
+
+    reward_bonus_up = 0
+    reward_bonus_down = 0
+
+
+    """右侧high benevolence"""
+    counters = [counter1]
+
+
+
+    if any(counter in ("lettuce") for counter in counters):
+        best_action = intelligently_find_item_number(env, agent_up, "get lettuce")
+
+        if firsttime_up_get_counter_lettuce == True:
+            reward_shaping_bonus = check_benevolence(env, best_action, action_up)
+            if reward_shaping_bonus == 20:
+                total_reward_bonus += reward_shaping_bonus
+                reward_bonus_up = 100
+                firsttime_up_get_counter_lettuce = False
+
+
+    if all(counter not in ("lettuce") for counter in counters):
+
+        if agent_down.holding and isinstance(agent_down.holding, Lettuce):
+            best_action = "go to counter"
+
+            if firsttime_down_go_to_counter == True:
+
+                reward_shaping_bonus = check_benevolence(env, best_action, action_down)
+
+                if reward_shaping_bonus == 20:
+                    total_reward_bonus += reward_shaping_bonus
+                    reward_bonus_down = 100
+                    firsttime_down_go_to_counter = False
+
+
+    return reward_bonus_up, reward_bonus_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce
+
+
+
+
+def find_best_reachable_index(can_reach_1, can_reach_2, can_reach_3, distance_1, distance_2, distance_3):
+    reachable_indices = []
+    distances = []
+    
+    # 收集可达的索引和对应距离
+    if can_reach_1 != 4:
+        reachable_indices.append(0)
+        distances.append(distance_1)
+    if can_reach_2 != 4:
+        reachable_indices.append(1)
+        distances.append(distance_2)
+    if can_reach_3 != 4:
+        reachable_indices.append(2)
+        distances.append(distance_3)
+    
+    if not reachable_indices:
+        return False  # 没有可达的位置
+    
+    # 如果只有一个可达位置，直接返回该索引
+    if len(reachable_indices) == 1:
+        return reachable_indices[0]
+    
+    # 否则，返回距离最小的索引
+    min_distance_index = reachable_indices[distances.index(min(distances))]
+    return min_distance_index
+
+
+
+def intelligently_find_item_number(env, agent_item, raw_name):
+
+    if raw_name == "get plate":
+        target_x_1, target_y_1 = env._findPOitem(agent_item, macroActionDict[raw_name + " 1"])
+        can_reach_1 = env._navigate(agent_item, target_x_1, target_y_1)
+        distance_1 = env._calDistance(target_x_1, target_y_1, agent_item.x, agent_item.y)
+
+        target_x_2, target_y_2 = env._findPOitem(agent_item, macroActionDict[raw_name + " 2"])
+        can_reach_2 = env._navigate(agent_item, target_x_2, target_y_2)
+        distance_2 = env._calDistance(target_x_2, target_y_2, agent_item.x, agent_item.y)
+
+        target_x_3, target_y_3 = env._findPOitem(agent_item, macroActionDict["get dirty plate"])
+        can_reach_3 = env._navigate(agent_item, target_x_3, target_y_3)
+        distance_3 = env._calDistance(target_x_3, target_y_3, agent_item.x, agent_item.y)
+
+
+        best_action = "stay"
+
+        min_distance_index = find_best_reachable_index(can_reach_1, can_reach_2, can_reach_3, distance_1, distance_2, distance_3)
+
+        if min_distance_index == 0:
+            best_action = raw_name + " 1"
+        if min_distance_index == 1:
+            best_action = raw_name + " 2"
+        if min_distance_index == 2:
+            best_action = "get dirty plate"
+        # print('----', best_action)
+        return best_action
+
+    
+
+    target_x_1, target_y_1 = env._findPOitem(agent_item, macroActionDict[raw_name + " 1"])
+    can_reach_1 = env._navigate(agent_item, target_x_1, target_y_1)
+    distance_1 = env._calDistance(target_x_1, target_y_1, agent_item.x, agent_item.y)
+
+    target_x_2, target_y_2 = env._findPOitem(agent_item, macroActionDict[raw_name + " 2"])
+    can_reach_2 = env._navigate(agent_item, target_x_2, target_y_2)
+    distance_2 = env._calDistance(target_x_2, target_y_2, agent_item.x, agent_item.y)
+
+    best_action = "stay"
+    if can_reach_1 == 4 and can_reach_2 != 4:
+        best_action = raw_name + " 2"
+
+    if can_reach_1 != 4 and can_reach_2 == 4:
+        best_action = raw_name + " 1"
+
+    if can_reach_1 != 4 and can_reach_2 != 4:
+        if distance_1 <= distance_2:
+            best_action = raw_name + " 1"
+
+        else:
+            best_action = raw_name + " 2"
+    
+    return best_action
+
+
+
+def check_benevolence(env, best_action, action):
+    env.reward = 0
+    if action == macroActionDict[best_action] and macroActionDict[best_action] != 0:
+        env.reward += 20
+    return env.reward
+
+
+
+
+
+
+
 class SingleAgentWrapper(gym.Wrapper):
     """
     A wrapper to extract a single agent's perspective from a multi-agent environment.
@@ -32,12 +198,18 @@ class SingleAgentWrapper(gym.Wrapper):
         self.action_space = env.action_space
         self.other_agent_model = other_agent_model
 
+        self.firsttime_down_go_to_counter = True
+
+        self.firsttime_up_get_counter_lettuce = True
 
         self.obs = None
 
 
     def reset(self):
         self.obs = self.env.reset()
+
+        self.firsttime_down_go_to_counter = True
+        self.firsttime_up_get_counter_lettuce = True
 
         return self.obs[self.agent_index]
 
@@ -57,7 +229,14 @@ class SingleAgentWrapper(gym.Wrapper):
 
         actions[1 - self.agent_index] = other_agent_action[0]
 
-        primary_actions, _ = self.env._computeLowLevelActions(actions)
+
+
+        primary_actions, real_execute_macro_actions = self.env._computeLowLevelActions(actions)
+
+
+
+        benevolence_reward_up, benevolence_reward_down, self.firsttime_down_go_to_counter, self.firsttime_up_get_counter_lettuce = check_action_benevolence(self.env, real_execute_macro_actions[0], real_execute_macro_actions[1], self.firsttime_down_go_to_counter, self.firsttime_up_get_counter_lettuce)
+
 
         self.obs, rewards, dones, info = self.env.step(primary_actions)
 
@@ -72,8 +251,8 @@ class SingleAgentWrapper(gym.Wrapper):
         if self.agent_index == 0:
             if agent0_previous_location != agent0_current_location:
                 # print('here')
-                agent0_moving_reward -= 50
-            return self.obs[self.agent_index], rewards[0] + rewards[1] + agent0_moving_reward, dones, info
+                agent0_moving_reward -= 0
+            return self.obs[self.agent_index], rewards[0] + rewards[1] + agent0_moving_reward + benevolence_reward_up, dones, info
         
 
         # 营造不喜欢移动的human
@@ -82,9 +261,9 @@ class SingleAgentWrapper(gym.Wrapper):
             # print(human_agent_previous_location, human_agent_current_location)
             if agent1_previous_location != agent1_current_location:
                 # print('here')
-                agent1_moving_reward -= 50
+                agent1_moving_reward -= 0
 
-            return self.obs[self.agent_index], rewards[0] + rewards[1] + agent1_moving_reward, dones, info
+            return self.obs[self.agent_index], rewards[0] + rewards[1] + agent1_moving_reward + benevolence_reward_down, dones, info
 
 
 
@@ -222,17 +401,17 @@ policy_kwargs = dict(
 model_agent_0 = PPO(
     "MlpPolicy",
     env_agent_0,
-    verbose=1,
     policy_kwargs=policy_kwargs,
-    seed=SEED
+    seed=SEED,
+    **ppo_params,
 )
 
 model_agent_1 = PPO(
     "MlpPolicy",
     env_agent_1,
-    verbose=1,
     policy_kwargs=policy_kwargs,
-    seed=SEED
+    seed=SEED,
+    **ppo_params,
 )
 
 
@@ -241,8 +420,8 @@ model_agent_1.set_logger(new_logger)
 
 
 # layout_v1：物品各自在两边
-reward_callback_0 = EpisodeRewardCallback('final_trained_models/[equilibrium]agent0_step_penalty_5_vs_5')
-reward_callback_1 = EpisodeRewardCallback('final_trained_models/[equilibrium]agent1_step_penalty_5_vs_5')
+reward_callback_0 = EpisodeRewardCallback('final_trained_models/[new]agent0_step_penalty_5_vs_5')
+reward_callback_1 = EpisodeRewardCallback('final_trained_models/[new]agent1_step_penalty_5_vs_5')
 
 
 # agent0_step_penalty_1_vs_1, agent1_step_penalty_1_vs_1
@@ -284,7 +463,7 @@ reward_callback_1 = EpisodeRewardCallback('final_trained_models/[equilibrium]age
 
 
 # Training configuration
-total_alternate_steps = 5000000  # Total training steps
+total_alternate_steps = 500000  # Total training steps
 alternate_interval = 10000  # Each agent trains for this many steps before switching
 
 

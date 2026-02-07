@@ -116,103 +116,13 @@ env_agent_0 = SingleAgentWrapper(shared_env, agent_index=0)
 env_agent_1 = SingleAgentWrapper(shared_env, agent_index=1)
 
 
-"""旧的layout且没有加moving penalty"""
-# model_agent_0 = PPO.load("final_trained_models/[equilibrium]agent0_highlevelaction\model_700000", env=env_agent_0)
-# model_agent_1 = PPO.load("final_trained_models/[equilibrium]agent1_highlevelaction\model_700000", env=env_agent_1)
 
+model_agent_0 = PPO.load("../policy_pool/[equilibrium]agent0_a0sp_0_a1sp_0_helping_False/model_500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool/[equilibrium]agent1_a0sp_0_a1sp_0_helping_False/model_500000", env=env_agent_1)
 
-"""新的layout但是没有加movivng penalty"""
-# model_agent_0 = PPO.load("final_trained_models/[equilibrium]agent0_highlevelaction_layout_v1\model_700000", env=env_agent_0)
-# model_agent_1 = PPO.load("final_trained_models/[equilibrium]agent1_highlevelaction_layout_v1\model_700000", env=env_agent_1)
+model_agent_0 = PPO.load("../policy_pool/[equilibrium]agent0_a0sp_0_a1sp_0_helping_True/model_500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool/[equilibrium]agent1_a0sp_0_a1sp_0_helping_True/model_500000", env=env_agent_1)
 
-
-"""新的layout而且加上了moving penalty"""
-# model_agent_0 = PPO.load("final_trained_models/[equilibrium]agent0_highlevelaction_step_penalty_layout_v1\model_600000", env=env_agent_0)
-# model_agent_1 = PPO.load("final_trained_models/[equilibrium]agent1_highlevelaction_step_penalty_layout_v1\model_600000", env=env_agent_1)
-
-
-"""新的layout，partitial_obs"""
-# model_agent_0 = PPO.load("final_trained_models/[equilibrium]agent0_highlevelaction_partitial_obs_layout_v1\model_3400000", env=env_agent_0)
-# model_agent_1 = PPO.load("final_trained_models/[equilibrium]agent1_highlevelaction_partitial_obs_layout_v1\model_3400000", env=env_agent_1)
-
-
-
-
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_step_penalty_1_vs_1/model_300000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_step_penalty_1_vs_1/model_300000", env=env_agent_1)
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_0_a1sp_0/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_0_a1sp_0/model_500000", env=env_agent_1)
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_step_penalty_5_vs_5/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_step_penalty_5_vs_5/model_500000", env=env_agent_1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_0_a1sp_0/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_0_a1sp_0/model_500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_0_a1sp_1/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_0_a1sp_1/model_500000", env=env_agent_1)
-
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_0_a1sp_10/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_0_a1sp_10/model_500000", env=env_agent_1)
-
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_0_a1sp_20/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_0_a1sp_20/model_500000", env=env_agent_1)
-
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_0_a1sp_50/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_0_a1sp_50/model_500000", env=env_agent_1)
-
-
-"""=================================================="""
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_1_a1sp_0/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_1_a1sp_0/model_500000", env=env_agent_1)
-
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_1_a1sp_1/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_1_a1sp_1/model_500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_1_a1sp_10/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_1_a1sp_10/model_500000", env=env_agent_1)
-
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_1_a1sp_20/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_1_a1sp_20/model_500000", env=env_agent_1)
-
-
-# model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_1_a1sp_50/model_500000", env=env_agent_0)
-# model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_1_a1sp_50/model_500000", env=env_agent_1)
-
-
-
-"""=================================================="""
-
-model_agent_0 = PPO.load("../final_trained_models/[equilibrium]agent0_a0sp_10_a1sp_0/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("../final_trained_models/[equilibrium]agent1_a0sp_10_a1sp_0/model_500000", env=env_agent_1)
 
 
 # gamma, reward (helping)
