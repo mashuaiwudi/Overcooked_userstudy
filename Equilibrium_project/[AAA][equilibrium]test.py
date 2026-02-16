@@ -47,10 +47,6 @@ class SingleAgentWrapper(gym.Wrapper):
 
         self.obs = self.env._get_macro_obs()
 
-        # human_agent_current_location = [self.agent[1].x, self.agent[1].y]
-
-
-        # print(human_agent_previous_location, human_agent_current_location)
 
 
         return self.obs[self.agent_index], rewards[2], dones, info
@@ -117,9 +113,6 @@ env_agent_1 = SingleAgentWrapper(shared_env, agent_index=1)
 
 
 
-model_agent_0 = PPO.load("../policy_pool/[equilibrium]agent0_a0sp_0_a1sp_0_helping_False/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool/[equilibrium]agent1_a0sp_0_a1sp_0_helping_False/model_500000", env=env_agent_1)
-
 model_agent_0 = PPO.load("../policy_pool/[equilibrium]agent0_a0sp_0_a1sp_0_helping_True/model_500000", env=env_agent_0)
 model_agent_1 = PPO.load("../policy_pool/[equilibrium]agent1_a0sp_0_a1sp_0_helping_True/model_500000", env=env_agent_1)
 
@@ -137,19 +130,21 @@ import numpy as np
 
 reward_this = 0
 
-# ===== 先 render 第一帧（非常关键）=====
-frame0 = shared_env.render(mode="rgb_array")  # RGB, HxWx3
-h, w, _ = frame0.shape
 
-fps = 10  # 与 sleep(0.1) 对齐
-video_path = "rollout_1st.mp4"
+"""For render to a mp4 video"""
 
-# fourcc: mp4 常用编码
-fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-video_writer = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
+# # ===== Render the first frame=====
+# frame0 = shared_env.render(mode="rgb_array")  # RGB, HxWx3
+# h, w, _ = frame0.shape
 
-# OpenCV 需要 BGR
-video_writer.write(cv2.cvtColor(frame0, cv2.COLOR_RGB2BGR))
+# fps = 10
+# video_path = "rollout_1st.mp4"
+
+# fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+# video_writer = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
+
+# video_writer.write(cv2.cvtColor(frame0, cv2.COLOR_RGB2BGR))
+
 
 for step in range(200):
     action_0, _states_0 = model_agent_0.predict(obs[0])
@@ -184,11 +179,11 @@ for step in range(200):
 
     frame = shared_env.render(mode="rgb_array")
 
-    # 尺寸保护（极少数 env 会抖）
-    if frame.shape[0] != h or frame.shape[1] != w:
-        frame = frame[:h, :w]
 
-    video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+    # if frame.shape[0] != h or frame.shape[1] != w:
+    #     frame = frame[:h, :w]
+
+    # video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
 
     print(reward_this)
     time.sleep(0.1)
@@ -200,6 +195,6 @@ for step in range(200):
         if dones:
             break
 
-# ===== 释放资源 =====
-video_writer.release()
-print(f"Saved video to: {video_path}")
+# ===== release =====
+# video_writer.release()
+# print(f"Saved video to: {video_path}")
