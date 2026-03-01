@@ -54,6 +54,95 @@ class SingleAgentWrapper(gym.Wrapper):
 
 
 
+def check_get_lettuce_preference(env, action_up, action_down, boolean_preference_up, boolean_preference_down, action_dones):
+
+    # 如果agent采取了某种action，则单独加分
+
+    reward_bonus_up = 0
+    reward_bonus_down = 0
+
+    agent_up = env.agent[0]
+    agent_down = env.agent[1]
+
+    knife = env.knife[0]
+
+    if boolean_preference_up and not agent_up.holding and action_dones[0] == False and (env.macroActionName[action_up] == "get lettuce 1" or env.macroActionName[action_up] == "get lettuce 2"):
+        reward_bonus_up = 100
+
+    if boolean_preference_down and not agent_down.holding and action_dones[1] == False and (env.macroActionName[action_down] == "get lettuce 1" or env.macroActionName[action_down] == "get lettuce 2"):
+        reward_bonus_down = 100
+
+    return reward_bonus_up, reward_bonus_down
+
+
+
+def check_get_plate_preference(env, action_up, action_down, boolean_preference_up, boolean_preference_down, action_dones):
+
+    # 如果agent采取了某种action，则单独加分
+
+    reward_bonus_up = 0
+    reward_bonus_down = 0
+
+    agent_up = env.agent[0]
+    agent_down = env.agent[1]
+
+
+    if boolean_preference_up and not agent_up.holding and action_dones[0] == False and (env.macroActionName[action_up] == "get plate 1" or env.macroActionName[action_up] == "get plate 2"):
+        reward_bonus_up = 100
+
+    if boolean_preference_down and not agent_down.holding and action_dones[1] == False and (env.macroActionName[action_down] == "get plate 1" or env.macroActionName[action_down] == "get plate 2"):
+        reward_bonus_down = 100
+
+    return reward_bonus_up, reward_bonus_down
+
+
+
+def check_go_to_knife_preference(env, action_up, action_down, boolean_preference_up, boolean_preference_down, action_dones):
+
+    # 如果agent采取了某种action，则单独加分
+
+    reward_bonus_up = 0
+    reward_bonus_down = 0
+
+    agent_up = env.agent[0]
+    agent_down = env.agent[1]
+
+
+    if boolean_preference_up and agent_up.holding and action_dones[0] == False and isinstance(agent_up.holding, Lettuce) and (env.macroActionName[action_up] == "go to knife 1" or env.macroActionName[action_up] == "go to knife 2"):
+        reward_bonus_up = 100
+
+    if boolean_preference_down and agent_down.holding and action_dones[1] == False and isinstance(agent_down.holding, Lettuce) and (env.macroActionName[action_down] == "go to knife 1" or env.macroActionName[action_down] == "go to knife 2"):
+        reward_bonus_down = 100
+
+    return reward_bonus_up, reward_bonus_down
+
+
+
+def check_deliver_preference(env, action_up, action_down, boolean_preference_up, boolean_preference_down, action_dones):
+
+    # 如果agent采取了某种action，则单独加分
+
+    reward_bonus_up = 0
+    reward_bonus_down = 0
+
+    agent_up = env.agent[0]
+    agent_down = env.agent[1]
+
+
+    if boolean_preference_up and agent_up.holding and action_dones[0] == False and agent_up.holding.containing and (env.macroActionName[action_up] == "deliver"):
+        reward_bonus_up = 100
+
+    if boolean_preference_down and agent_down.holding and action_dones[1] == False and agent_down.holding.containing and (env.macroActionName[action_down] == "deliver"):
+        reward_bonus_down = 100
+
+    return reward_bonus_up, reward_bonus_down
+
+
+
+
+
+
+
 rewardList = [{
     "minitask finished": 0,
     "minitask failed": 0,
@@ -116,6 +205,12 @@ env_agent_1 = SingleAgentWrapper(shared_env, agent_index=1)
 model_agent_0 = PPO.load("../policy_pool/[equilibrium]agent0_a0sp_0_a1sp_0_helping_True/model_500000", env=env_agent_0)
 model_agent_1 = PPO.load("../policy_pool/[equilibrium]agent1_a0sp_0_a1sp_0_helping_True/model_500000", env=env_agent_1)
 
+model_agent_0 = PPO.load("final_trained_models/[event]agent0_preference_0000/model_500000", env=env_agent_0)
+model_agent_1 = PPO.load("final_trained_models/[event]agent1_preference_0100/model_500000", env=env_agent_1)
+
+
+model_agent_0 = PPO.load("final_trained_models/[equilibrium]agent0_a0sp_0_a1sp_0_helping_False_gamma0.8/model_500000", env=env_agent_0)
+model_agent_1 = PPO.load("final_trained_models/[equilibrium]agent1_a0sp_0_a1sp_0_helping_False_gamma0.8/model_500000", env=env_agent_1)
 
 
 # gamma, reward (helping)
@@ -159,9 +254,56 @@ for step in range(200):
     human_agent_previous_location = [shared_env.agent[1].x, shared_env.agent[1].y]
 
 
-    total_action, real_execute_macro_actions = shared_env._computeLowLevelActions(
+    total_action, real_execute_macro_actions, action_dones = shared_env._computeLowLevelActions(
         total_action
     )
+
+
+
+
+
+    boolean_get_lettuce_preference_up = False
+    boolean_get_lettuce_preference_down = False
+
+
+    boolean_get_plate_preference_up = False
+    boolean_get_plate_preference_down = True
+
+
+    boolean_go_to_knife_preference_up = False
+    boolean_go_to_knife_preference_down = False
+
+    
+    boolean_deliver_preference_up = False
+    boolean_deliver_preference_down = False
+
+
+
+    get_lettuce_preference_reward_up, get_lettuce_preference_reward_down = check_get_lettuce_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_get_lettuce_preference_up, boolean_get_lettuce_preference_down, action_dones)
+
+    get_plate_preference_reward_up, get_plate_preference_reward_down = check_get_plate_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_get_plate_preference_up, boolean_get_plate_preference_down, action_dones)
+
+    go_to_knife_preference_reward_up, go_to_knife_preference_reward_down = check_go_to_knife_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_go_to_knife_preference_up, boolean_go_to_knife_preference_down, action_dones)
+
+    deliver_preference_reward_up, deliver_preference_reward_down = check_deliver_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_deliver_preference_up, boolean_deliver_preference_down, action_dones)
+
+    print('get_lettuce_preference_reward_up: ', get_lettuce_preference_reward_up)
+    print('get_lettuce_preference_reward_down: ', get_lettuce_preference_reward_down)
+    print('get_plate_preference_reward_up: ', get_plate_preference_reward_up)
+    print('get_plate_preference_reward_down: ', get_plate_preference_reward_down)
+    print('go_to_knife_preference_reward_up: ', go_to_knife_preference_reward_up)
+    print('go_to_knife_preference_reward_down: ', go_to_knife_preference_reward_down)
+    print('deliver_preference_reward_up: ', deliver_preference_reward_up)
+    print('deliver_preference_reward_down: ', deliver_preference_reward_down)
+
+
+
+
+
+
+
+
+
 
     obs, rewards, dones, info = shared_env.step(total_action)
     reward_this += rewards[0] + rewards[1]
@@ -186,7 +328,7 @@ for step in range(200):
     # video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
 
     print(reward_this)
-    time.sleep(0.1)
+    time.sleep(1)
 
     if isinstance(dones, (list, tuple, np.ndarray)):
         if any(dones):

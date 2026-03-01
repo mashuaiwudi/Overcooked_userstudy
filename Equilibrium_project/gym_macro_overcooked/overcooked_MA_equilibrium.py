@@ -232,6 +232,8 @@ class Overcooked_MA_equilibrium(Overcooked_equilibrium):
         real_execute_macro_actions = []
 
         primitive_actions = []
+
+        action_dones = []
         
         counter_x = 10
         
@@ -241,6 +243,7 @@ class Overcooked_MA_equilibrium(Overcooked_equilibrium):
 
 
             # print("done " + str(idx), self.macroAgent[idx].cur_macro_action_done)
+            action_dones.append(self.macroAgent[idx].cur_macro_action_done)
 
             """下面是判断是否done的操作，我试着允许打断，允许打断的话，那就先注释掉"""
 
@@ -626,7 +629,7 @@ class Overcooked_MA_equilibrium(Overcooked_equilibrium):
             # print(self.macroAgent[idx].cur_macro_action_done)
             # 返回的其实只是两个agent下一个step要做的primitive action，而不是一个primitive action序列
             primitive_actions.append(primitive_action)
-        return primitive_actions, real_execute_macro_actions
+        return primitive_actions, real_execute_macro_actions, action_dones
 
 
 
