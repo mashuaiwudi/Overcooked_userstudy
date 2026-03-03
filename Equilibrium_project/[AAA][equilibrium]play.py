@@ -79,7 +79,7 @@ def main():
         'task': ["lettuce salad"],
         'rewardList': rewardList,
         'map_type': "circle",
-        'n_agent': 2,
+        'n_agent': 1,
         'obs_radius': 0,
         'mode': "vector",
         'debug': True

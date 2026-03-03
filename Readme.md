@@ -102,3 +102,12 @@ Each script corresponds to a different training setting or observation configura
 `[AAA][equilibrium]test.py` is used to load the trained models and evaluate their performance.
 
 Run this script to see how the trained agents behave in the environment.
+
+
+# Updates
+## 20260303: add a human-alone setting
+I update the `Equilibrium_project/gym_macro_overcooked/overcooked_equilibrium.py`
+
+So you need to set `'n_agent': 1` and reset the environment when participants move to the human-alone episode.
+
+### Note that you need to check the returned reward! For human-AI setting, the reward is team reward (agent1+ agent 2). But for human-alone setting, be sure to only return the human agent's reward!
