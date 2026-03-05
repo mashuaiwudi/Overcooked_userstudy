@@ -111,3 +111,32 @@ I update the `Equilibrium_project/gym_macro_overcooked/overcooked_equilibrium.py
 So you need to set `'n_agent': 1` and reset the environment when participants move to the human-alone episode.
 
 ### Note that you need to check the returned reward! For human-AI setting, the reward is team reward (agent1+ agent 2). But for human-alone setting, be sure to only return the human agent's reward!
+
+
+
+## 20260305: return AI reward for BO
+
+### Please see `[AAA][equilibrium]test_show_gaia_how_to_get_AI_reward.py`
+
+First, you need to add two state variables in the `__init__()` and `reset()` functions of `SingleAgentWrapper_accept_keyboard_action`:
+
+`self.firsttime_down_go_to_counter = True`  
+`self.firsttime_up_get_counter_lettuce = True`
+
+Then, you need to add several helper functions. See **Line 75–240**.
+
+Next, you need to insert some code **before `env.step()`**, see **Line 243–254**.
+
+Then, you need to insert some code **after `env.step()`**, see **Line 271–294**.
+
+### All the code I newly added has been enclosed within comment blocks. You can search `Gaia, please see here`
+
+    # Gaia, please see here
+    # ====================
+    The codes you need to add.
+    The codes you need to add.
+    The codes you need to add.
+    The codes you need to add.
+    The codes you need to add.
+    The codes you need to add.
+    # ====================

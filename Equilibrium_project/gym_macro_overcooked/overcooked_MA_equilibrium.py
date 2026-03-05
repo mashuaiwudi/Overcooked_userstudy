@@ -629,7 +629,8 @@ class Overcooked_MA_equilibrium(Overcooked_equilibrium):
             # print(self.macroAgent[idx].cur_macro_action_done)
             # 返回的其实只是两个agent下一个step要做的primitive action，而不是一个primitive action序列
             primitive_actions.append(primitive_action)
-        return primitive_actions, real_execute_macro_actions, action_dones
+        # return primitive_actions, real_execute_macro_actions, action_dones
+        return primitive_actions, real_execute_macro_actions
 
 
 
