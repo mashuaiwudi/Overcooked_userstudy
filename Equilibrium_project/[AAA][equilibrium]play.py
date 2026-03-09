@@ -36,7 +36,18 @@ def main():
 
 
     pygame.init()
-    screen = pygame.display.set_mode((600, 600))
+
+    grid_h, grid_w = 5, 8   # 或者从 env_params['grid_dim'] 读取
+    cell_size = 80
+    screen_width = grid_w * cell_size
+    screen_height = grid_h * cell_size
+
+    print(screen_height, screen_width)
+
+    # screen = pygame.display.set_mode((screen_width, screen_height))
+
+
+    # screen = pygame.display.set_mode((600, 600))
     pygame.display.set_caption("Overcooked Control")
 
     env_id = 'Overcooked-equilibrium-v0'
@@ -75,11 +86,11 @@ def main():
     }]
 
     env_params = {
-        'grid_dim': [5, 5],
+        'grid_dim': [5, 8],
         'task': ["lettuce salad"],
         'rewardList': rewardList,
-        'map_type': "circle",
-        'n_agent': 1,
+        'map_type': "counter",
+        'n_agent': 2,
         'obs_radius': 0,
         'mode': "vector",
         'debug': True

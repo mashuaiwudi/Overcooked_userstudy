@@ -177,12 +177,12 @@ rewardList = [{
 
 
 
-mac_env_id = 'Overcooked-MA-equilibrium-v0'
+mac_env_id = 'Overcooked-MA-equilibrium-v1'
 env_params = {
-    'grid_dim': [5, 5],
+    'grid_dim': [5, 8],
     'task': ["lettuce salad"],
     'rewardList': rewardList,
-    'map_type': "circle",
+    'map_type': "counter",
     'n_agent': 2,
     'obs_radius': 0,
     'mode': "vector",
@@ -202,15 +202,17 @@ env_agent_1 = SingleAgentWrapper(shared_env, agent_index=1)
 
 
 
-model_agent_0 = PPO.load("../policy_pool/[equilibrium]agent0_a0sp_0_a1sp_0_helping_True/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool/[equilibrium]agent1_a0sp_0_a1sp_0_helping_True/model_500000", env=env_agent_1)
-
-model_agent_0 = PPO.load("final_trained_models/[event]agent0_preference_0000/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("final_trained_models/[event]agent1_preference_0100/model_500000", env=env_agent_1)
+model_agent_0 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent0_a0sp_0_a1sp_0_helping_False_gamma0.8_0.8/model_500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_False_gamma0.8_0.8/model_500000", env=env_agent_1)
 
 
-model_agent_0 = PPO.load("final_trained_models/[equilibrium]agent0_a0sp_0_a1sp_0_helping_False_gamma0.8/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("final_trained_models/[equilibrium]agent1_a0sp_0_a1sp_0_helping_False_gamma0.8/model_500000", env=env_agent_1)
+
+model_agent_0 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent0_a0sp_0_a1sp_0_helping_True_gamma0.8_0.8/model_500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_True_gamma0.8_0.8/model_500000", env=env_agent_1)
+
+
+model_agent_0 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent0_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_500000", env=env_agent_1)
 
 
 # gamma, reward (helping)
@@ -254,7 +256,7 @@ for step in range(200):
     human_agent_previous_location = [shared_env.agent[1].x, shared_env.agent[1].y]
 
 
-    total_action, real_execute_macro_actions, action_dones = shared_env._computeLowLevelActions(
+    total_action, real_execute_macro_actions = shared_env._computeLowLevelActions(
         total_action
     )
 
@@ -262,39 +264,39 @@ for step in range(200):
 
 
 
-    boolean_get_lettuce_preference_up = False
-    boolean_get_lettuce_preference_down = False
+    # boolean_get_lettuce_preference_up = False
+    # boolean_get_lettuce_preference_down = False
 
 
-    boolean_get_plate_preference_up = False
-    boolean_get_plate_preference_down = True
+    # boolean_get_plate_preference_up = False
+    # boolean_get_plate_preference_down = True
 
 
-    boolean_go_to_knife_preference_up = False
-    boolean_go_to_knife_preference_down = False
+    # boolean_go_to_knife_preference_up = False
+    # boolean_go_to_knife_preference_down = False
 
     
-    boolean_deliver_preference_up = False
-    boolean_deliver_preference_down = False
+    # boolean_deliver_preference_up = False
+    # boolean_deliver_preference_down = False
 
 
 
-    get_lettuce_preference_reward_up, get_lettuce_preference_reward_down = check_get_lettuce_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_get_lettuce_preference_up, boolean_get_lettuce_preference_down, action_dones)
+    # get_lettuce_preference_reward_up, get_lettuce_preference_reward_down = check_get_lettuce_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_get_lettuce_preference_up, boolean_get_lettuce_preference_down, action_dones)
 
-    get_plate_preference_reward_up, get_plate_preference_reward_down = check_get_plate_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_get_plate_preference_up, boolean_get_plate_preference_down, action_dones)
+    # get_plate_preference_reward_up, get_plate_preference_reward_down = check_get_plate_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_get_plate_preference_up, boolean_get_plate_preference_down, action_dones)
 
-    go_to_knife_preference_reward_up, go_to_knife_preference_reward_down = check_go_to_knife_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_go_to_knife_preference_up, boolean_go_to_knife_preference_down, action_dones)
+    # go_to_knife_preference_reward_up, go_to_knife_preference_reward_down = check_go_to_knife_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_go_to_knife_preference_up, boolean_go_to_knife_preference_down, action_dones)
 
-    deliver_preference_reward_up, deliver_preference_reward_down = check_deliver_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_deliver_preference_up, boolean_deliver_preference_down, action_dones)
+    # deliver_preference_reward_up, deliver_preference_reward_down = check_deliver_preference(shared_env, real_execute_macro_actions[0], real_execute_macro_actions[1], boolean_deliver_preference_up, boolean_deliver_preference_down, action_dones)
 
-    print('get_lettuce_preference_reward_up: ', get_lettuce_preference_reward_up)
-    print('get_lettuce_preference_reward_down: ', get_lettuce_preference_reward_down)
-    print('get_plate_preference_reward_up: ', get_plate_preference_reward_up)
-    print('get_plate_preference_reward_down: ', get_plate_preference_reward_down)
-    print('go_to_knife_preference_reward_up: ', go_to_knife_preference_reward_up)
-    print('go_to_knife_preference_reward_down: ', go_to_knife_preference_reward_down)
-    print('deliver_preference_reward_up: ', deliver_preference_reward_up)
-    print('deliver_preference_reward_down: ', deliver_preference_reward_down)
+    # print('get_lettuce_preference_reward_up: ', get_lettuce_preference_reward_up)
+    # print('get_lettuce_preference_reward_down: ', get_lettuce_preference_reward_down)
+    # print('get_plate_preference_reward_up: ', get_plate_preference_reward_up)
+    # print('get_plate_preference_reward_down: ', get_plate_preference_reward_down)
+    # print('go_to_knife_preference_reward_up: ', go_to_knife_preference_reward_up)
+    # print('go_to_knife_preference_reward_down: ', go_to_knife_preference_reward_down)
+    # print('deliver_preference_reward_up: ', deliver_preference_reward_up)
+    # print('deliver_preference_reward_down: ', deliver_preference_reward_down)
 
 
 
@@ -328,7 +330,7 @@ for step in range(200):
     # video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
 
     print(reward_this)
-    time.sleep(1)
+    time.sleep(2)
 
     if isinstance(dones, (list, tuple, np.ndarray)):
         if any(dones):

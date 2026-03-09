@@ -45,8 +45,13 @@ class Game:
         self.scale = 80   # num pixels per tile
         self.holding_scale = 0.5
         self.container_scale = 0.7
-        self.width = self.scale * self.env.xlen
-        self.height = self.scale * self.env.ylen
+        self.width = self.scale * self.env.ylen
+        self.height = self.scale * self.env.xlen
+
+        print('original width: ', self.width)
+        print('original height: ', self.height)
+
+
         self.tile_size = (self.scale, self.scale)
         self.holding_size = tuple((self.holding_scale * np.asarray(self.tile_size)).astype(int))
         self.container_size = tuple((self.container_scale * np.asarray(self.tile_size)).astype(int))

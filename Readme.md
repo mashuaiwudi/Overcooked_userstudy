@@ -140,3 +140,28 @@ Then, you need to insert some code **after `env.step()`**, see **Line 271–294*
     The codes you need to add.
     The codes you need to add.
     # ====================
+
+
+## 20260309: Add a new map
+
+I added a new map called "counter", which has a counter in the middle so that two agents can cooperate.
+
+The trained policies are in the `policy_pool_newmap/`
+
+To run on this new map, you need to update `overcooked_equilibrium.py` and `overcooked_MA_equilibrium_counter.py` to their latest versions.
+
+And you need to change 3 places in the code: `mac_env_id` to `Overcooked-MA-equilibrium-v1`, `grid_dim` to `[5, 8]`, `map_type` to `counter`.
+
+```bash
+mac_env_id = 'Overcooked-MA-equilibrium-v1'
+env_params = {
+    'grid_dim': [5, 8],
+    'task': ["lettuce salad"],
+    'rewardList': rewardList,
+    'map_type': "counter",
+    'n_agent': 2,
+    'obs_radius': 0,
+    'mode': "vector",
+    'debug': True
+}
+```

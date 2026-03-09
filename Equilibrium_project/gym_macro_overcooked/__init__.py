@@ -14,5 +14,5 @@ register(
 
 register(
     id='Overcooked-MA-equilibrium-v1',
-    entry_point='gym_macro_overcooked.overcooked_MA_equilibrium_cramped:Overcooked_MA_equilibrium_cramped',
+    entry_point='gym_macro_overcooked.overcooked_MA_equilibrium_counter:Overcooked_MA_equilibrium_counter',
 )
