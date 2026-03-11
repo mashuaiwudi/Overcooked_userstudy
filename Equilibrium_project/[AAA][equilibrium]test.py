@@ -215,6 +215,11 @@ model_agent_0 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent0_a0s
 model_agent_1 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_500000", env=env_agent_1)
 
 
+model_agent_0 = PPO.load("final_trained_models/[equilibrium][counter]agent0_a0sp_0_a1sp_0_helping_True_gamma0.8_0.8/model_1000000", env=env_agent_0)
+model_agent_1 = PPO.load("final_trained_models/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_True_gamma0.8_0.8/model_1000000", env=env_agent_1)
+
+
+
 # gamma, reward (helping)
 
 
@@ -231,16 +236,16 @@ reward_this = 0
 """For render to a mp4 video"""
 
 # # ===== Render the first frame=====
-# frame0 = shared_env.render(mode="rgb_array")  # RGB, HxWx3
-# h, w, _ = frame0.shape
+frame0 = shared_env.render(mode="rgb_array")  # RGB, HxWx3
+h, w, _ = frame0.shape
 
-# fps = 10
-# video_path = "rollout_1st.mp4"
+fps = 10
+video_path = "rollout_1st.mp4"
 
-# fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-# video_writer = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
+fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+video_writer = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
 
-# video_writer.write(cv2.cvtColor(frame0, cv2.COLOR_RGB2BGR))
+video_writer.write(cv2.cvtColor(frame0, cv2.COLOR_RGB2BGR))
 
 
 for step in range(200):
@@ -324,13 +329,13 @@ for step in range(200):
     frame = shared_env.render(mode="rgb_array")
 
 
-    # if frame.shape[0] != h or frame.shape[1] != w:
-    #     frame = frame[:h, :w]
+    if frame.shape[0] != h or frame.shape[1] != w:
+        frame = frame[:h, :w]
 
-    # video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+    video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
 
     print(reward_this)
-    time.sleep(2)
+    time.sleep(0.1)
 
     if isinstance(dones, (list, tuple, np.ndarray)):
         if any(dones):
@@ -340,5 +345,5 @@ for step in range(200):
             break
 
 # ===== release =====
-# video_writer.release()
-# print(f"Saved video to: {video_path}")
+video_writer.release()
+print(f"Saved video to: {video_path}")

@@ -83,10 +83,27 @@ def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_c
     agent_down = env.agent[1]
 
 
+
     counter1_x = 2
     counter1_y = 2
 
+    counter2_x = 2
+    counter2_y = 3
+
+    counter3_x = 2
+    counter3_y = 4
+
+    counter4_x = 2
+    counter4_y = 5
+
+
+
     counter1 = ITEMNAME[env.map[counter1_x][counter1_y]]
+    counter2 = ITEMNAME[env.map[counter2_x][counter2_y]]
+    counter3 = ITEMNAME[env.map[counter3_x][counter3_y]]
+    counter4 = ITEMNAME[env.map[counter4_x][counter4_y]]
+
+
 
     reward_shaping_bonus = 0
     total_reward_bonus = 0
@@ -95,7 +112,13 @@ def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_c
     reward_bonus_up = 0
     reward_bonus_down = 0
 
-    counters = [counter1]
+
+    """右侧high benevolence"""
+    counters = [counter1, counter2, counter3, counter4]
+
+    # print(counters)
+
+
 
     if any(counter in ("lettuce") for counter in counters):
         best_action = intelligently_find_item_number(env, agent_up, "get lettuce")
@@ -104,7 +127,7 @@ def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_c
             reward_shaping_bonus = check_benevolence(env, best_action, action_up)
             if reward_shaping_bonus == 20:
                 total_reward_bonus += reward_shaping_bonus
-                reward_bonus_up = 100
+                reward_bonus_up = 1000
                 firsttime_up_get_counter_lettuce = False
 
 
@@ -119,10 +142,15 @@ def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_c
 
                 if reward_shaping_bonus == 20:
                     total_reward_bonus += reward_shaping_bonus
-                    reward_bonus_down = 100
+                    reward_bonus_down = 1000
                     firsttime_down_go_to_counter = False
 
+    print('reward_bonus_up: ', reward_bonus_up)
+    print('reward_bonus_down: ', reward_bonus_down)
+
+
     return reward_bonus_up, reward_bonus_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce
+
 
 
 
@@ -275,12 +303,12 @@ rewardList = [{
 
 
 
-mac_env_id = 'Overcooked-MA-equilibrium-v0'
+mac_env_id = 'Overcooked-MA-equilibrium-v1'
 env_params = {
-    'grid_dim': [5, 5],
+    'grid_dim': [5, 8],
     'task': ["lettuce salad"],
     'rewardList': rewardList,
-    'map_type': "circle",
+    'map_type': "counter",
     'n_agent': 2,
     'obs_radius': 0,
     'mode': "vector",
@@ -300,13 +328,16 @@ env_agent_1 = SingleAgentWrapper(shared_env, agent_index=1)
 
 
 
-ai_policy_id = "[equilibrium]agent0_a0sp_0_a1sp_0_helping_True_gamma0.9_0.9"
-human_policy_id = "[equilibrium]agent1_a0sp_0_a1sp_0_helping_True_gamma0.9_0.9"
+ai_policy_id = "[equilibrium][counter]agent0_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95"
+human_policy_id = "[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95"
 
 
-model_agent_0 = PPO.load("../policy_pool_using_gamma/" + ai_policy_id + "/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_using_gamma/" + human_policy_id + "/model_500000", env=env_agent_1)
+# model_agent_0 = PPO.load("../policy_pool_using_gamma/" + ai_policy_id + "/model_500000", env=env_agent_0)
+# model_agent_1 = PPO.load("../policy_pool_using_gamma/" + human_policy_id + "/model_500000", env=env_agent_1)
 
+
+model_agent_0 = PPO.load("final_trained_models/" + ai_policy_id + "/model_500000", env=env_agent_0)
+model_agent_1 = PPO.load("final_trained_models/" + human_policy_id + "/model_500000", env=env_agent_1)
 
 
 
@@ -381,7 +412,8 @@ for step in range(200):
 
     
     """This is AI reward, for Bayes Optimization"""
-    if cooperation_bonus == True:
+
+    if cooperation_bonus == 'True':
         if ai_agent_previous_location != ai_agent_current_location:
             ai_reward += float(rewards[0] + rewards[1]) - float(step_penalty) + benevolence_reward_up
         else:
@@ -394,6 +426,11 @@ for step in range(200):
             ai_reward += float(rewards[0] + rewards[1])
     # ====================
 
+
+    print('benevolence_reward_down: ', benevolence_reward_down)
+    if cooperation_bonus == 'True':
+        human_reward += float(rewards[0] + rewards[1]) + benevolence_reward_down
+        print('here')
 
 
     print('AI reward: ', ai_reward)

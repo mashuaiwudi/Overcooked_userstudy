@@ -165,3 +165,7 @@ env_params = {
     'debug': True
 }
 ```
+
+
+
+## 20260310: Change if cooperation_bonus == True to if cooperation_bonus == 'True'

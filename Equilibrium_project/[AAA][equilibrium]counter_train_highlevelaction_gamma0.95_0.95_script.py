@@ -86,6 +86,8 @@ def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_c
     """右侧high benevolence"""
     counters = [counter1, counter2, counter3, counter4]
 
+    # print(counters)
+
 
 
     if any(counter in ("lettuce") for counter in counters):
@@ -95,7 +97,7 @@ def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_c
             reward_shaping_bonus = check_benevolence(env, best_action, action_up)
             if reward_shaping_bonus == 20:
                 total_reward_bonus += reward_shaping_bonus
-                reward_bonus_up = 500
+                reward_bonus_up = 1000
                 firsttime_up_get_counter_lettuce = False
 
 
@@ -110,7 +112,7 @@ def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_c
 
                 if reward_shaping_bonus == 20:
                     total_reward_bonus += reward_shaping_bonus
-                    reward_bonus_down = 100
+                    reward_bonus_down = 1000
                     firsttime_down_go_to_counter = False
 
 
@@ -291,6 +293,7 @@ class SingleAgentWrapper(gym.Wrapper):
         # ====== 保留你原来的“移动惩罚”逻辑 ======
         if self.helping == True:
             if self.agent_index == 0:
+                # print('UP: ', benevolence_reward_up)
                 if agent0_previous_location != agent0_current_location:
                     total_reward = float(rewards[0] + rewards[1]) - step_penalty + benevolence_reward_up
                 else:
@@ -298,6 +301,7 @@ class SingleAgentWrapper(gym.Wrapper):
                 return self.obs[self.agent_index], total_reward, dones, info
 
             if self.agent_index == 1:
+                # print('DOWN: ', benevolence_reward_down)
                 if agent1_previous_location != agent1_current_location:
                     total_reward = float(rewards[0] + rewards[1]) - step_penalty + benevolence_reward_down
                 else:
@@ -513,7 +517,7 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
     model_agent_1.set_logger(new_logger)
 
     # ====== Training configuration ======
-    total_alternate_steps = 500_000
+    total_alternate_steps = 1_500_000
     alternate_interval = 10_000
 
     global_start_time = time.time()
@@ -561,8 +565,8 @@ def main():
     # ====== 批处理：25 个组合，每个组合训练 agent0 + agent1 两个模型 => 2*25 个模型 ======
     helping = [True, False]
     # step_penalty_list_agent0 = [0, 1, 10, 20, 50]
-    step_penalty_list_agent0 = [0, 1, 3]
-    step_penalty_list_agent1 = [0, 1, 3]
+    step_penalty_list_agent0 = [0, 1, 5]
+    step_penalty_list_agent1 = [0, 1, 5]
 
     for help_partner in helping:
         for sp0 in step_penalty_list_agent0:

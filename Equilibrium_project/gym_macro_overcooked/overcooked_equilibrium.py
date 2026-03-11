@@ -188,10 +188,10 @@ class Overcooked_equilibrium(gym.Env):
             if self.n_agent == 2:
                 if self.mapType == "counter":
                     # ITEMIDX= {"space": 0, "counter": 1, "agent": 2, "tomato": 3, "lettuce": 4, "plate": 5, "knife": 6, "delivery": 7, "onion": 8}
-                    map =  [[1, 1, 1, 1, 6, 5, 5, 1],
+                    map =  [[1, 1, 1, 1, 6, 1, 1, 1],
                             [1, 0, 0, 2, 0, 0, 0, 1],
-                            [1, 0, 1, 1, 1, 1, 0, 7],
-                            [1, 0, 0, 2, 0, 0, 0, 1],
+                            [5, 0, 1, 1, 1, 1, 0, 7],
+                            [5, 0, 0, 2, 0, 0, 0, 1],
                             [1, 1, 1, 4, 4, 1, 1, 1]]
 
 
