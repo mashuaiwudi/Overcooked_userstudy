@@ -142,7 +142,7 @@ Then, you need to insert some code **after `env.step()`**, see **Line 271–294*
     # ====================
 
 
-## 20260309: Add a new map
+## 20260309: Add a new map "counter" and upload the corresponding policy pool
 
 I added a new map called "counter", which has a counter in the middle so that two agents can cooperate.
 
@@ -169,3 +169,26 @@ env_params = {
 
 
 ## 20260310: Change if cooperation_bonus == True to if cooperation_bonus == 'True'
+
+
+## 20260312: Add a new map "thin path" and upload the corresponding policy pool
+
+The trained policies are in the `policy_pool_thinpath/`
+
+To run on this new map, you need to update `overcooked_equilibrium.py` and `overcooked_MA_equilibrium_thinpath.py` to their latest versions.
+
+And you need to change 3 places in the code: `mac_env_id` to `Overcooked-MA-equilibrium-v2`, `grid_dim` to `[5, 7]`, `map_type` to `thinpath`.
+
+```bash
+mac_env_id = 'Overcooked-MA-equilibrium-v2'
+env_params = {
+    'grid_dim': [5, 7],
+    'task': ["lettuce salad"],
+    'rewardList': rewardList,
+    'map_type': "thinpath",
+    'n_agent': 2,
+    'obs_radius': 0,
+    'mode': "vector",
+    'debug': True
+}
+```

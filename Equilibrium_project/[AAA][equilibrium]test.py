@@ -177,12 +177,12 @@ rewardList = [{
 
 
 
-mac_env_id = 'Overcooked-MA-equilibrium-v1'
+mac_env_id = 'Overcooked-MA-equilibrium-v2'
 env_params = {
-    'grid_dim': [5, 8],
+    'grid_dim': [5, 7],
     'task': ["lettuce salad"],
     'rewardList': rewardList,
-    'map_type': "counter",
+    'map_type': "thinpath",
     'n_agent': 2,
     'obs_radius': 0,
     'mode': "vector",
@@ -215,8 +215,32 @@ model_agent_0 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent0_a0s
 model_agent_1 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_500000", env=env_agent_1)
 
 
-model_agent_0 = PPO.load("final_trained_models/[equilibrium][counter]agent0_a0sp_0_a1sp_0_helping_True_gamma0.8_0.8/model_1000000", env=env_agent_0)
-model_agent_1 = PPO.load("final_trained_models/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_True_gamma0.8_0.8/model_1000000", env=env_agent_1)
+model_agent_0 = PPO.load("final_trained_models/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1000000", env=env_agent_0)
+model_agent_1 = PPO.load("final_trained_models/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1000000", env=env_agent_1)
+
+
+model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1500000", env=env_agent_1)
+
+
+model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_1)
+
+
+model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_False_gamma0.8_0.8/model_1500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_False_gamma0.8_0.8/model_1500000", env=env_agent_1)
+
+
+model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_1_a1sp_1_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_1_a1sp_1_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_1)
+
+
+model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_False_gamma0.9_0.9/model_1500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_False_gamma0.9_0.9/model_1500000", env=env_agent_1)
+
+
+model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_1)
 
 
 

@@ -86,10 +86,10 @@ def main():
     }]
 
     env_params = {
-        'grid_dim': [5, 8],
+        'grid_dim': [5, 7],
         'task': ["lettuce salad"],
         'rewardList': rewardList,
-        'map_type': "counter",
+        'map_type': "thinpath",
         'n_agent': 2,
         'obs_radius': 0,
         'mode': "vector",

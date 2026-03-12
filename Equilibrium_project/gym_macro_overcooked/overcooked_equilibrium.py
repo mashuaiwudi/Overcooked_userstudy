@@ -194,7 +194,15 @@ class Overcooked_equilibrium(gym.Env):
                             [5, 0, 0, 2, 0, 0, 0, 1],
                             [1, 1, 1, 4, 4, 1, 1, 1]]
 
-
+        elif self.xlen == 5 and self.ylen == 7:      
+            if self.n_agent == 2:
+                if self.mapType == "thinpath":
+                    # ITEMIDX= {"space": 0, "counter": 1, "agent": 2, "tomato": 3, "lettuce": 4, "plate": 5, "knife": 6, "delivery": 7, "onion": 8}
+                    map =  [[1, 4, 1, 1, 1, 6, 1],
+                            [4, 0, 0, 1, 0, 2, 1],
+                            [1, 2, 0, 0, 0, 0, 1],
+                            [5, 0, 0, 1, 0, 0, 1],
+                            [1, 5, 1, 1, 1, 7, 1]]
                     
         elif self.xlen == 3 and self.ylen == 5:
             if self.n_agent == 2:
@@ -1607,6 +1615,15 @@ class Overcooked_equilibrium(gym.Env):
                                     [1, 0, 1, 1, 1, 1, 0, 1],
                                     [1, 0, 0, 0, 0, 0, 0, 1],
                                     [1, 1, 1, 1, 1, 1, 1, 1]]
+
+
+            elif self.xlen == 5 and self.ylen == 7:
+                if self.mapType == "thinpath":
+                    agent.pomap =  [[1, 1, 1, 1, 1, 1, 1],
+                                    [1, 0, 0, 1, 0, 0, 1],
+                                    [1, 0, 0, 0, 0, 0, 1],
+                                    [1, 0, 0, 1, 0, 0, 1],
+                                    [1, 1, 1, 1, 1, 1, 1]]
 
                     
 
