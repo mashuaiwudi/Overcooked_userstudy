@@ -194,7 +194,7 @@ env_params = {
 ```
 
 
-## 20260323: I tained a new policy pool on the thin path map.
+## 20260323: Retrained a new policy pool on the thin path map.
 
 The trained policies are in the `policy_pool_thinpath_new/`
 
