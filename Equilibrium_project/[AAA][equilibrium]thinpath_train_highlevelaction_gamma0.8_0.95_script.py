@@ -401,7 +401,9 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
         "pick up bad lettuce": 0
     }]
 
-    mac_env_id = "Overcooked-MA-equilibrium-v2"
+    # mac_env_id = "Overcooked-MA-equilibrium-v2"
+
+    mac_env_id = "Overcooked-MA-equilibrium-v3"
     env_params = {
         "grid_dim": [5, 7],
         "task": ["lettuce salad"],
@@ -420,8 +422,8 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
     os.makedirs(log_dir, exist_ok=True)
     new_logger = configure(log_dir, ["csv", "tensorboard"])  # 不输出 stdout
 
-    save_dir_agent0 = os.path.join("final_trained_models", f"[equilibrium][thinpath]agent0_{combo_tag}")
-    save_dir_agent1 = os.path.join("final_trained_models", f"[equilibrium][thinpath]agent1_{combo_tag}")
+    save_dir_agent0 = os.path.join("final_trained_models", f"[equilibrium][thinpath2]agent0_{combo_tag}")
+    save_dir_agent1 = os.path.join("final_trained_models", f"[equilibrium][thinpath2]agent1_{combo_tag}")
 
     reward_callback_0 = EpisodeRewardCallback(save_dir_agent0)
     reward_callback_1 = EpisodeRewardCallback(save_dir_agent1)
@@ -552,8 +554,8 @@ def main():
     # ====== 批处理：25 个组合，每个组合训练 agent0 + agent1 两个模型 => 2*25 个模型 ======
     helping = [True, False]
     # step_penalty_list_agent0 = [0, 1, 10, 20, 50]
-    step_penalty_list_agent0 = [0, 1, 5]
-    step_penalty_list_agent1 = [0, 1, 5]
+    step_penalty_list_agent0 = [0, 1, 3]
+    step_penalty_list_agent1 = [0, 1, 3]
 
     for help_partner in helping:
         for sp0 in step_penalty_list_agent0:

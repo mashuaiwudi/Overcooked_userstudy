@@ -192,3 +192,16 @@ env_params = {
     'debug': True
 }
 ```
+
+
+## 20260323: I tained a new policy pool on the thin path map.
+
+The trained policies are in the `policy_pool_thinpath_new/`
+
+To run on this new map, you need to update `__init__.py`, `overcooked_equilibrium.py` and `overcooked_MA_equilibrium_thinpath_flexible.py` to their latest versions.
+
+And you need to change `mac_env_id` to `Overcooked-MA-equilibrium-v3`
+
+```bash
+mac_env_id = 'Overcooked-MA-equilibrium-v3'
+```

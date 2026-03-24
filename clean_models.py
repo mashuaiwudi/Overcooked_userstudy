@@ -5,10 +5,10 @@ def should_keep(filename: str) -> bool:
     """
     Return True if the file should be kept.
     Only keep files ending with:
-        _500000.zip
-        _500000.png
+        _1500000.zip
+        _1500000.png
     """
-    return filename.endswith("_500000.zip") or filename.endswith("_500000.png")
+    return filename.endswith("_1500000.zip") or filename.endswith("_1500000.png")
 
 
 def clean_directory(root_dir: str, force: bool = False):
@@ -38,14 +38,14 @@ def clean_directory(root_dir: str, force: bool = False):
         print("\n[DRY RUN MODE] No files were deleted.")
         print("Use --force to actually delete them.")
 
-    print("\nExample files to delete (first 10):")
-    for f in deleted_files[:10]:
+    print("\nExample files to delete (first 30):")
+    for f in deleted_files[:30]:
         print("  ", f)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Delete all files except those ending with _500000.zip and _500000.png"
+        description="Delete all files except those ending with _1500000.zip and _1500000.png"
     )
     parser.add_argument("root_dir", type=str, help="Root directory to clean")
     parser.add_argument("--force", action="store_true", help="Actually delete files")

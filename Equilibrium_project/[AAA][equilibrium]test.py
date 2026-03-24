@@ -177,7 +177,8 @@ rewardList = [{
 
 
 
-mac_env_id = 'Overcooked-MA-equilibrium-v2'
+# mac_env_id = 'Overcooked-MA-equilibrium-v2'
+mac_env_id = 'Overcooked-MA-equilibrium-v3'
 env_params = {
     'grid_dim': [5, 7],
     'task': ["lettuce salad"],
@@ -239,8 +240,8 @@ model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_
 model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_False_gamma0.9_0.9/model_1500000", env=env_agent_1)
 
 
-model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_1)
+model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_1_a1sp_5_helping_True_gamma0.9_0.8/model_1500000", env=env_agent_0)
+model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_1_a1sp_5_helping_True_gamma0.9_0.8/model_1500000", env=env_agent_1)
 
 
 

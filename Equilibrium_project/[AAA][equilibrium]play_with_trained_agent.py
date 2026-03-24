@@ -73,7 +73,8 @@ def main():
     # screen = pygame.display.set_mode((600, 600))
     pygame.display.set_caption("Overcooked Control")
 
-    mac_env_id = 'Overcooked-MA-equilibrium-v0'
+    # mac_env_id = 'Overcooked-MA-equilibrium-v0'
+    mac_env_id = 'Overcooked-MA-equilibrium-v2'
 
 
     rewardList = [{
@@ -109,10 +110,12 @@ def main():
     }]
 
     env_params = {
-        'grid_dim': [5, 5],
+        # 'grid_dim': [5, 5],
+        'grid_dim': [5, 7],
         'task': ["lettuce salad"],
         'rewardList': rewardList,
-        'map_type': "circle",
+        # 'map_type': "circle",
+        'map_type': "thinpath",
         'n_agent': 2,
         'obs_radius': 0,
         'mode': "vector",
@@ -131,7 +134,7 @@ def main():
 
 
     # Load the agent model
-    agent_model = PPO.load("final_trained_models/[equilibrium]agent0_highlevelaction_layout_v1\model_700000", env=env_agent_0)
+    agent_model = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_1_a1sp_5_helping_True_gamma0.9_0.8/model_1500000", env=env_agent_0)
     
     obs = env_agent_0.reset()
     env.reset()
