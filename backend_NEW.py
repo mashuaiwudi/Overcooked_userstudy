@@ -2,6 +2,7 @@
 import os
 import numpy as np
 import sys
+from BayesOpt import TSNEBayesOptimizer, create_surrogate_spec
 
 # Equilibrium_project" folder
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,6 +17,11 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 os.environ["PYTHONHASHSEED"] = "0"
+
+# Prevent pygame/SDL from trying to initialize display on macOS
+# This is required because Flask handles requests in background threads,
+# and SDL2 cannot set the main menu from a non-main thread on macOS
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 
 
@@ -55,19 +61,31 @@ except Exception:
     pass
 
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+import logging
+
+# Suppress Flask/Werkzeug request logs
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
+from logging_utils import backend_logger as logger
 from stable_baselines3 import PPO
 from stable_baselines3.common.save_util import load_from_zip_file
 import random
 import gym_macro_overcooked
 
-print("--> Loaded gym_macro_overcooked (Environments: Overcooked-equilibrium-v0)")
+logger.info("[ENV - INIT] loaded gym_macro_overcooked (Environments: Overcooked-equilibrium-v0)")
 
 from gym_macro_overcooked.items import Tomato, Lettuce, Onion, Plate, Knife, Delivery, Agent, Food, DirtyPlate
 
 
-app = Flask(__name__)
+STATIC_DIR = os.path.join(target_folder, "static")
+
+app = Flask(
+    __name__,
+    static_folder=STATIC_DIR,
+    static_url_path="/static"
+)
 CORS(app)
 
 
@@ -93,7 +111,7 @@ def _seed_env_everything(env, seed: int):
 
 
 
-KEYS_ACTIONS = {'ArrowUp': 3, 'ArrowRight': 0, 'ArrowDown': 1, 'ArrowLeft': 2}
+KEYS_ACTIONS = {'ArrowUp': 3, 'ArrowRight': 0, 'ArrowDown': 1, 'ArrowLeft': 2,  'Stay': 4}
 ACTION_TO_KEY = {v: k for k, v in KEYS_ACTIONS.items()}
 ACTION_TO_KEY[4] = "Stay"
 
@@ -101,37 +119,160 @@ ACTION_TO_KEY[4] = "Stay"
 
 MAX_STEPS = 200
 
-
 # =========================
-# fixed map, random AI policy
+# map registry / policy pools
 # =========================
-FIXED_MAP_TYPE = "circle"
-FIXED_GRID_DIM = [5, 5]
+DEFAULT_EXPERIMENT_MAP = "thinpath"
 
-POLICY_POOL_DIR = os.path.join(current_dir, "policy_pool")
+MAP_CONFIGS = {
+    "circle": {
+        "map_type": "circle",
+        "grid_dim": [5, 5],
+        "policy_pool_dir": os.path.join(current_dir, "policy_pool"),
+        "embedding_csv": os.path.join(current_dir, "tsnt.csv"),
+        "policy_prefix": "[equilibrium]agent0_",
+        "checkpoint_filename": "model_500000.zip",
+        "env_id": "Overcooked-equilibrium-v0",
+        "mac_env_id": "Overcooked-MA-equilibrium-v0",
+        "layout_id": "fixed_circle_5x5",
+        "aliases": ["circle", "fixed_circle_5x5"],
+    },
+    "counter": {
+        "map_type": "counter",
+        "grid_dim": [5, 8],
+        "policy_pool_dir": os.path.join(current_dir, "policy_pool_newmap2"),
+        "embedding_csv": os.path.join(current_dir, "tsnt_counter.csv"),
+        "policy_prefix": "[equilibrium][counter]agent0_",
+        "checkpoint_filename": "model_1500000.zip",
+        "env_id": "Overcooked-equilibrium-v0",
+        "mac_env_id": "Overcooked-MA-equilibrium-v1",
+        "layout_id": "fixed_counter_5x8",
+        "aliases": ["counter", "fixed_counter_5x8", "newmap2"],
+    },
+    "thinpath": {
+        "map_type": "thinpath",
+        "grid_dim": [5, 7],
+        "policy_pool_dir": os.path.join(current_dir, "policy_pool_thinpath"),
+        "embedding_csv": os.path.join(current_dir, "tsnt_thinpath.csv"),
+        "policy_prefix": "[equilibrium][thinpath]agent0_",
+        "checkpoint_filename": "model_1500000.zip",
+        "env_id": "Overcooked-equilibrium-v0",
+        "mac_env_id": "Overcooked-MA-equilibrium-v2",
+        "layout_id": "fixed_thinpath_5x7",
+        "aliases": ["thinpath", "fixed_thinpath_5x7", "thinpath"],
+    },
+}
+
+# backward-compatible defaults
+FIXED_MAP_TYPE = DEFAULT_EXPERIMENT_MAP
+FIXED_GRID_DIM = list(MAP_CONFIGS[DEFAULT_EXPERIMENT_MAP]["grid_dim"])
 
 
-# This function is used for randomly picking one policy from the AI policy pool.
+def _normalize_map_name(map_name):
+    if map_name is None:
+        return None
+    candidate = str(map_name).strip().lower()
+    if not candidate:
+        return None
+    if candidate in MAP_CONFIGS:
+        return candidate
 
-def _pick_random_policy_checkpoint():
-    """
-    pick an model from /policy_pool/
-    """
-    if not os.path.isdir(POLICY_POOL_DIR):
-        raise FileNotFoundError(f"POLICY_POOL_DIR not found: {POLICY_POOL_DIR}")
+    for registered_name, cfg in MAP_CONFIGS.items():
+        aliases = {registered_name, str(cfg.get("map_type", "")).lower(), str(cfg.get("layout_id", "")).lower()}
+        aliases.update(str(alias).strip().lower() for alias in cfg.get("aliases", []))
+        if candidate in aliases:
+            return registered_name
+    return None
+
+
+def _infer_map_name(map_name=None, layout_id=None, config_id=None, sess=None):
+    if str(config_id).strip().lower() == "layout_practice":
+        return "practice"
+    if str(layout_id).strip().lower() == "layout_practice":
+        return "practice"
+    
+    for candidate in (map_name, layout_id, config_id):
+        normalized = _normalize_map_name(candidate)
+        if normalized is not None:
+            return normalized
+
+        if candidate is None:
+            continue
+
+        lowered = str(candidate).strip().lower()
+        for registered_name, cfg in MAP_CONFIGS.items():
+            aliases = {registered_name, str(cfg.get("map_type", "")).lower(), str(cfg.get("layout_id", "")).lower()}
+            aliases.update(str(alias).strip().lower() for alias in cfg.get("aliases", []))
+            if any(alias and alias in lowered for alias in aliases):
+                return registered_name
+
+    current_map_name = getattr(sess, "current_map_name", None) if sess is not None else None
+    if current_map_name == "practice":
+        return "practice"
+    if current_map_name in MAP_CONFIGS:
+        return current_map_name
+
+    return DEFAULT_EXPERIMENT_MAP
+
+
+def _get_experiment_map_config(map_name=None, layout_id=None, config_id=None, sess=None):
+    resolved_map_name = _infer_map_name(map_name=map_name, layout_id=layout_id, config_id=config_id, sess=sess)
+    if resolved_map_name not in MAP_CONFIGS:
+        available = ", ".join(sorted(MAP_CONFIGS))
+        raise ValueError(f"Unknown map '{map_name}'. Available maps: {available}")
+    return resolved_map_name, MAP_CONFIGS[resolved_map_name]
+
+
+def _get_used_policy_names(sess, map_name: str):
+    used_by_map = getattr(sess, "used_policy_names_by_map", None)
+    if not isinstance(used_by_map, dict):
+        used_by_map = {}
+        sess.used_policy_names_by_map = used_by_map
+    return list(used_by_map.get(map_name, []))
+
+
+def _remember_policy_name(sess, map_name: str, policy_name: str):
+    used_by_map = getattr(sess, "used_policy_names_by_map", None)
+    if not isinstance(used_by_map, dict):
+        used_by_map = {}
+        sess.used_policy_names_by_map = used_by_map
+    used = used_by_map.setdefault(map_name, [])
+    if policy_name not in used:
+        used.append(policy_name)
+
+
+
+
+def _pick_random_policy_checkpoint(
+    policy_pool_dir: str,
+    checkpoint_filename: str,
+    exclude_policy_names=None,
+):
+    if not policy_pool_dir:
+        raise ValueError("policy_pool_dir must be provided")
+    if not os.path.isdir(policy_pool_dir):
+        raise FileNotFoundError(f"policy pool directory not found: {policy_pool_dir}")
 
     subdirs = [
-        os.path.join(POLICY_POOL_DIR, d)
-        for d in os.listdir(POLICY_POOL_DIR)
-        if os.path.isdir(os.path.join(POLICY_POOL_DIR, d))
+        os.path.join(policy_pool_dir, d)
+        for d in os.listdir(policy_pool_dir)
+        if os.path.isdir(os.path.join(policy_pool_dir, d))
     ]
+    subdirs = [d for d in subdirs if "agent0" in os.path.basename(d)]
+
     if not subdirs:
-        raise FileNotFoundError(f"No subfolders found under: {POLICY_POOL_DIR}")
+        raise FileNotFoundError(f"No policy subfolders found under: {policy_pool_dir}")
+
+    if exclude_policy_names:
+        exclude_set = set(exclude_policy_names)
+        filtered = [d for d in subdirs if os.path.basename(d) not in exclude_set]
+        if filtered:
+            subdirs = filtered
 
     chosen_dir = random.choice(subdirs)
-    ckpt_path = os.path.join(chosen_dir, "model_500000.zip")
+    ckpt_path = os.path.join(chosen_dir, checkpoint_filename)
     if not os.path.isfile(ckpt_path):
-        raise FileNotFoundError(f"model_500000.zip not found in: {chosen_dir}")
+        raise FileNotFoundError(f"{checkpoint_filename} not found in: {chosen_dir}")
 
     return chosen_dir, ckpt_path
 
@@ -183,9 +324,15 @@ class SingleAgentWrapper_accept_keyboard_action(_gym.Wrapper):
 
         self.reset_step = reset_step
 
+        self.firsttime_down_go_to_counter = True
+        self.firsttime_up_get_counter_lettuce = True
+
     def reset(self):
         self.obs = self.env.reset()
         self.env_reset_step = 0
+       
+        self.firsttime_down_go_to_counter = True
+        self.firsttime_up_get_counter_lettuce = True
         return self.obs[self.agent_index]
 
     def step(self, action, keyboard_action):
@@ -201,7 +348,18 @@ class SingleAgentWrapper_accept_keyboard_action(_gym.Wrapper):
             self.env.macroAgent[1].cur_macro_action_done = True
             self.obs = self.env._get_macro_obs()
 
-        return self.obs[self.agent_index], rewards[self.agent_index] + rewards[1 - self.agent_index], dones, info
+        # Save per-agent rewards for logging (agent 0 = AI, agent 1 = Human)
+        self.last_raw_rewards = rewards
+        try:
+            rr = np.array(rewards).flatten()
+            self.last_ai_reward = float(rr[0]) if rr.size > 0 else None
+            self.last_human_reward = float(rr[1]) if rr.size > 1 else None
+        except Exception:
+            self.last_ai_reward = None
+            self.last_human_reward = None
+
+        team_reward = rewards[self.agent_index] + rewards[1 - self.agent_index]
+        return self.obs[self.agent_index], team_reward, dones, info
 
 
 
@@ -214,6 +372,312 @@ def _as_int_action(a):
         return int(a_np.item())
     return int(a_np.flatten()[0])
 
+
+
+
+
+# =========================
+# AI reward helpers for BO
+# =========================
+import re
+
+ITEMNAME = ["space", "counter", "agent", "tomato", "lettuce", "plate", "knife", "delivery", "onion", "dirtyplate", "badlettuce"]
+
+macroActionDict = {"stay": 0, "get lettuce 1": 1, "get lettuce 2": 2, "get plate 1": 3, "get plate 2": 4, "go to knife 1": 5, "deliver 1": 6, "chop": 7, "go to counter": 8, "right": 9, "down": 10, "left": 11, "up": 12}
+
+
+def check_action_benevolence_circle(env, action_up, action_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce):
+
+    agent_up = env.agent[0]
+    agent_down = env.agent[1]
+
+
+    counter1_x = 2
+    counter1_y = 2
+
+    counter1 = ITEMNAME[env.map[counter1_x][counter1_y]]
+
+    reward_shaping_bonus = 0
+    total_reward_bonus = 0
+
+
+    reward_bonus_up = 0
+    reward_bonus_down = 0
+
+    counters = [counter1]
+
+    if any(counter in ("lettuce") for counter in counters):
+        best_action = intelligently_find_item_number(env, agent_up, "get lettuce")
+
+        if firsttime_up_get_counter_lettuce == True:
+            reward_shaping_bonus = check_benevolence(env, best_action, action_up)
+            if reward_shaping_bonus == 20:
+                total_reward_bonus += reward_shaping_bonus
+                reward_bonus_up = 100
+                firsttime_up_get_counter_lettuce = False
+
+
+    if all(counter not in ("lettuce") for counter in counters):
+
+        if agent_down.holding and isinstance(agent_down.holding, Lettuce):
+            best_action = "go to counter"
+
+            if firsttime_down_go_to_counter == True:
+
+                reward_shaping_bonus = check_benevolence(env, best_action, action_down)
+
+                if reward_shaping_bonus == 20:
+                    total_reward_bonus += reward_shaping_bonus
+                    reward_bonus_down = 100
+                    firsttime_down_go_to_counter = False
+
+    return reward_bonus_up, reward_bonus_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce
+
+
+
+
+def check_action_benevolence_counter(env, action_up, action_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce):
+
+    agent_up = env.agent[0]
+    agent_down = env.agent[1]
+
+
+    counter1_x = 2
+    counter1_y = 2
+
+    counter2_x = 2
+    counter2_y = 3
+
+    counter3_x = 2
+    counter3_y = 4
+
+    counter4_x = 2
+    counter4_y = 5
+
+
+
+    counter1 = ITEMNAME[env.map[counter1_x][counter1_y]]
+    counter2 = ITEMNAME[env.map[counter2_x][counter2_y]]
+    counter3 = ITEMNAME[env.map[counter3_x][counter3_y]]
+    counter4 = ITEMNAME[env.map[counter4_x][counter4_y]]
+
+
+
+    reward_shaping_bonus = 0
+    total_reward_bonus = 0
+
+
+    reward_bonus_up = 0
+    reward_bonus_down = 0
+
+    counters = [counter1, counter2, counter3, counter4]
+
+
+
+    if any(counter in ("lettuce") for counter in counters):
+        best_action = intelligently_find_item_number(env, agent_up, "get lettuce")
+
+        if firsttime_up_get_counter_lettuce == True:
+            reward_shaping_bonus = check_benevolence(env, best_action, action_up)
+            if reward_shaping_bonus == 20:
+                total_reward_bonus += reward_shaping_bonus
+                reward_bonus_up = 1000
+                firsttime_up_get_counter_lettuce = False
+
+
+    if all(counter not in ("lettuce") for counter in counters):
+
+        if agent_down.holding and isinstance(agent_down.holding, Lettuce):
+            best_action = "go to counter"
+
+            if firsttime_down_go_to_counter == True:
+
+                reward_shaping_bonus = check_benevolence(env, best_action, action_down)
+
+                if reward_shaping_bonus == 20:
+                    total_reward_bonus += reward_shaping_bonus
+                    reward_bonus_down = 1000
+                    firsttime_down_go_to_counter = False
+
+
+    return reward_bonus_up, reward_bonus_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce
+
+
+
+
+def check_action_benevolence_thinpath(env, action_up, action_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce):
+
+    agent_up = env.agent[0]
+    agent_down = env.agent[1]
+
+
+
+    counter1_x = 1
+    counter1_y = 3
+
+    counter2_x = 3
+    counter2_y = 3
+
+
+
+    counter1 = ITEMNAME[env.map[counter1_x][counter1_y]]
+    counter2 = ITEMNAME[env.map[counter2_x][counter2_y]]
+
+
+    reward_shaping_bonus = 0
+    total_reward_bonus = 0
+
+
+    reward_bonus_up = 0
+    reward_bonus_down = 0
+
+    counters = [counter1, counter2]
+
+
+
+    if any(counter in ("lettuce") for counter in counters):
+        best_action = intelligently_find_item_number(env, agent_up, "get lettuce")
+
+        if firsttime_up_get_counter_lettuce == True:
+            reward_shaping_bonus = check_benevolence(env, best_action, action_up)
+            if reward_shaping_bonus == 20:
+                total_reward_bonus += reward_shaping_bonus
+                reward_bonus_up = 1000
+                firsttime_up_get_counter_lettuce = False
+
+
+    if all(counter not in ("lettuce") for counter in counters):
+
+        if agent_down.holding and isinstance(agent_down.holding, Lettuce):
+            best_action = "go to counter"
+
+            if firsttime_down_go_to_counter == True:
+
+                reward_shaping_bonus = check_benevolence(env, best_action, action_down)
+
+                if reward_shaping_bonus == 20:
+                    total_reward_bonus += reward_shaping_bonus
+                    reward_bonus_down = 1000
+                    firsttime_down_go_to_counter = False
+
+
+    return reward_bonus_up, reward_bonus_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce
+
+
+
+
+
+def find_best_reachable_index(can_reach_1, can_reach_2, can_reach_3, distance_1, distance_2, distance_3):
+    reachable_indices = []
+    distances = []
+    
+    if can_reach_1 != 4:
+        reachable_indices.append(0)
+        distances.append(distance_1)
+    if can_reach_2 != 4:
+        reachable_indices.append(1)
+        distances.append(distance_2)
+    if can_reach_3 != 4:
+        reachable_indices.append(2)
+        distances.append(distance_3)
+    
+    if not reachable_indices:
+        return False
+    
+    if len(reachable_indices) == 1:
+        return reachable_indices[0]
+    
+    min_distance_index = reachable_indices[distances.index(min(distances))]
+    return min_distance_index
+
+
+
+def intelligently_find_item_number(env, agent_item, raw_name):
+
+    if raw_name == "get plate":
+        target_x_1, target_y_1 = env._findPOitem(agent_item, macroActionDict[raw_name + " 1"])
+        can_reach_1 = env._navigate(agent_item, target_x_1, target_y_1)
+        distance_1 = env._calDistance(target_x_1, target_y_1, agent_item.x, agent_item.y)
+
+        target_x_2, target_y_2 = env._findPOitem(agent_item, macroActionDict[raw_name + " 2"])
+        can_reach_2 = env._navigate(agent_item, target_x_2, target_y_2)
+        distance_2 = env._calDistance(target_x_2, target_y_2, agent_item.x, agent_item.y)
+
+        target_x_3, target_y_3 = env._findPOitem(agent_item, macroActionDict["get dirty plate"])
+        can_reach_3 = env._navigate(agent_item, target_x_3, target_y_3)
+        distance_3 = env._calDistance(target_x_3, target_y_3, agent_item.x, agent_item.y)
+
+
+        best_action = "stay"
+
+        min_distance_index = find_best_reachable_index(can_reach_1, can_reach_2, can_reach_3, distance_1, distance_2, distance_3)
+
+        if min_distance_index == 0:
+            best_action = raw_name + " 1"
+        if min_distance_index == 1:
+            best_action = raw_name + " 2"
+        if min_distance_index == 2:
+            best_action = "get dirty plate"
+
+        return best_action
+
+    
+
+    target_x_1, target_y_1 = env._findPOitem(agent_item, macroActionDict[raw_name + " 1"])
+    can_reach_1 = env._navigate(agent_item, target_x_1, target_y_1)
+    distance_1 = env._calDistance(target_x_1, target_y_1, agent_item.x, agent_item.y)
+
+    target_x_2, target_y_2 = env._findPOitem(agent_item, macroActionDict[raw_name + " 2"])
+    can_reach_2 = env._navigate(agent_item, target_x_2, target_y_2)
+    distance_2 = env._calDistance(target_x_2, target_y_2, agent_item.x, agent_item.y)
+
+    best_action = "stay"
+    if can_reach_1 == 4 and can_reach_2 != 4:
+        best_action = raw_name + " 2"
+
+    if can_reach_1 != 4 and can_reach_2 == 4:
+        best_action = raw_name + " 1"
+
+    if can_reach_1 != 4 and can_reach_2 != 4:
+        if distance_1 <= distance_2:
+            best_action = raw_name + " 1"
+
+        else:
+            best_action = raw_name + " 2"
+    
+    return best_action
+
+
+
+def check_benevolence(env, best_action, action):
+    env.reward = 0
+    if action == macroActionDict[best_action] and macroActionDict[best_action] != 0:
+        env.reward += 20
+    return env.reward
+
+
+
+import re
+
+def parse_policy_id(policy_id: str):
+    """
+    Parse step_penalty (AAA) and cooperation_bonus (CCC) from policy_id
+
+    policy_id format:
+    [equilibrium]agent0_a0sp_AAA_a1sp_BBB_helping_CCC_gammaDDD_EEE
+    
+    """
+
+    pattern = r"a0sp_([^_]+).*?helping_([^_]+)"
+    match = re.search(pattern, policy_id)
+
+    if not match:
+        raise ValueError(f"Invalid policy_id format: {policy_id}")
+
+    step_penalty = match.group(1)
+    cooperation_bonus = match.group(2)
+
+    return step_penalty, cooperation_bonus
 
 
 # =========================
@@ -229,6 +693,7 @@ class Session:
         self.obs = None
         self.cur_step = 0
         self.cumulative_reward = 0.0
+        self.ai_reward_total = 0.0  # AI-only reward used for BayesOpt
         self.current_layout_id = None
         self.current_model_id = None
         self.robot_steps = []       # save each step of the AI agent
@@ -236,6 +701,18 @@ class Session:
         self.lock = threading.RLock()
         self.chosen_policy_dir = None
         self.chosen_ckpt_path = None
+       
+        # Experiment structure (episodes)
+        self.episode_index = None
+        self.round_in_episode = None
+        self.episode_phase = None
+        self.used_policy_names = []  # basenames of chosen policy dirs
+        self.solo_episode = False  # if True, freeze/hide AI teammate
+        self.used_policy_names = []  # backward-compatible flat cache
+        self.used_policy_names_by_map = {}  # map_name -> [policy_dir_basename, ...]
+        self.current_map_name = DEFAULT_EXPERIMENT_MAP
+        self.current_map_type = MAP_CONFIGS[DEFAULT_EXPERIMENT_MAP]["map_type"]
+        self.current_grid_dim = list(MAP_CONFIGS[DEFAULT_EXPERIMENT_MAP]["grid_dim"])
 
 
 class SessionManager:
@@ -282,18 +759,76 @@ class SessionManager:
 
 SESSION_MGR = SessionManager(ttl_seconds=3600)
 
+class OptimizerManager:
+    def __init__(self) -> None:
+        self.optimizers = {}
+
+    def _key(self, prolific_id, map_name):
+        return (prolific_id, map_name)
+
+    def optimizer_exists(self, prolific_id, map_name):
+        return self._key(prolific_id, map_name) in self.optimizers
+
+    def create_optimizer(self, prolific_id, map_name, embedding_csv, n_init, n_bo, n_knn):
+        key = self._key(prolific_id, map_name)
+        if key in self.optimizers:
+            return
+
+        surr = create_surrogate_spec(noise_variance=0.2)
+        self.optimizers[key] = TSNEBayesOptimizer(
+            embedding_csv=embedding_csv,
+            n_init=n_init,
+            n_bo=n_bo,
+            n_knn=n_knn,
+            n_best=1,
+            surrogate_spec=surr,
+            verbose=True
+        )
+
+    def get_optimizer(self, prolific_id, map_name):
+        return self.optimizers[self._key(prolific_id, map_name)]
+        
+OPTIMIZER_MGR = OptimizerManager()
+
+
 
 
 _model_cache_by_path = {}
 
+def _pick_policy_checkpoint(
+    policy: str,
+    policy_pool_dir: str,
+    policy_prefix: str,
+    checkpoint_filename: str,
+):
+    raw_policy = str(policy).strip()
 
+    candidate_names = [
+        raw_policy,
+        f"{policy_prefix}{raw_policy}",
+    ]
+
+    tried = []
+
+    for candidate in candidate_names:
+        chosen_dir = os.path.join(policy_pool_dir, candidate)
+        ckpt_pth = os.path.join(chosen_dir, checkpoint_filename)
+        tried.append(ckpt_pth)
+
+        if os.path.isfile(ckpt_pth):
+            logger.info(f"[POLICY - FOUND] {ckpt_pth}")
+            return chosen_dir, ckpt_pth
+
+    raise FileNotFoundError(
+        f"No checkpoint found for policy '{raw_policy}' in '{policy_pool_dir}'. "
+        f"Tried: {tried}"
+    )
 
 # This function is used for loading an AI model or getting an existing AI model.
 def _load_or_get_model_by_ckpt_path(ckpt_path: str):
-
+    assert "agent0" in ckpt_path, "loading agent1 somwhere"
     if ckpt_path in _model_cache_by_path:
         return _model_cache_by_path[ckpt_path]
-
     m = PPO.load(ckpt_path, device="cpu")
     try:
         m.policy.set_training_mode(False)
@@ -303,11 +838,8 @@ def _load_or_get_model_by_ckpt_path(ckpt_path: str):
         m.policy.eval()
     except Exception:
         pass
-
     _model_cache_by_path[ckpt_path] = m
     return m
-
-
 
 
 def _parse_config_id(layout_id: str = None, model_id: str = None, config_id: str = None) -> str:
@@ -319,54 +851,81 @@ def _parse_config_id(layout_id: str = None, model_id: str = None, config_id: str
 
 
 
-
-
-def create_envs_for_session(sess: Session, config_id: str):
-
-    # Now, I use a fixed map, which is the circle (5*5). And for each time, I randomly load a model from the policy_pool
-
-    # Fix the environment ID
-    env_id     = "Overcooked-equilibrium-v0"
-    mac_env_id = "Overcooked-MA-equilibrium-v0"
-
-    grid_dim = FIXED_GRID_DIM
-    n_agent = 2
-
-    # Judge whether the current phase is the practicing phase
+def create_envs_for_session(
+    sess: Session,
+    config_id: str,
+    choose_new_policy: bool = True,
+    optimizer: TSNEBayesOptimizer | None = None,
+    is_solo: bool | None = None,
+    map_name: str | None = None,
+    layout_id: str | None = None,
+):
     is_practice = (config_id == "layout_practice")
+    is_solo = bool(getattr(sess, "solo_episode", False)) if is_solo is None else bool(is_solo)
+
     if is_practice:
-        env_params = {
-            'grid_dim': [5, 5],
-            'task': ["lettuce salad"],
-            'rewardList': rewardList,
-            'map_type': "A",
-            'n_agent': n_agent,
-            'obs_radius': 0,
-            'mode': "vector",
-            'debug': True
+        env_id = "Overcooked-equilibrium-v0"
+        mac_env_id = "Overcooked-MA-equilibrium-v0"
+        active_map_name = "practice"
+        active_layout_id = "layout_practice"
+        active_cfg = {
+            "grid_dim": [5, 5],
+            "task": ["lettuce salad"],
+            "rewardList": rewardList,
+            "map_type": "A",
+            "n_agent": 2,
+            "obs_radius": 0,
+            "mode": "vector",
+            "debug": True,
         }
+        policy_pool_dir = None
+        policy_prefix = None
+        checkpoint_filename = None
     else:
-        # If it is not the practicing phase
-        env_params = {
-            'grid_dim': grid_dim,
-            'task': ["lettuce salad"],
-            'rewardList': rewardList,
-            'map_type': FIXED_MAP_TYPE,   # <- Using the circle map
-            'n_agent': n_agent,
-            'obs_radius': 0,
-            'mode': "vector",
-            'debug': True
-        }
+        active_map_name, map_cfg = _get_experiment_map_config(
+            map_name=map_name,
+            layout_id=layout_id,
+            config_id=config_id,
+            sess=sess,
+        )
+        active_cfg = dict(map_cfg)
+        env_id = active_cfg.pop("env_id")
+        mac_env_id = active_cfg.pop("mac_env_id")
+        active_layout_id = active_cfg.pop(
+            "layout_id",
+            f"fixed_{active_map_name}_{active_cfg['grid_dim'][0]}x{active_cfg['grid_dim'][1]}"
+        )
+        policy_pool_dir = active_cfg.pop("policy_pool_dir")
+        policy_prefix = active_cfg.pop("policy_prefix")
+        checkpoint_filename = active_cfg.pop("checkpoint_filename")
 
-    # Close the old env
+    n_agent = 1 if (is_solo and not is_practice) else int(active_cfg.get("n_agent", 2))
+    env_params = {
+        "grid_dim": list(active_cfg["grid_dim"]),
+        "task": list(active_cfg.get("task", ["lettuce salad"])),
+        "rewardList": active_cfg.get("rewardList", rewardList),
+        "map_type": active_cfg["map_type"],
+        "n_agent": n_agent,
+        "obs_radius": active_cfg.get("obs_radius", 0),
+        "mode": active_cfg.get("mode", "vector"),
+        "debug": active_cfg.get("debug", True),
+    }
+
+    active_grid_dim = list(env_params["grid_dim"])
+    active_map_type = env_params["map_type"]
+    map_changed = (getattr(sess, "current_map_name", None) != active_map_name)
+
     if sess.env is not None:
-        try: sess.env.close()
-        except: pass
+        try:
+            sess.env.close()
+        except Exception:
+            pass
     if sess.env_mac is not None:
-        try: sess.env_mac.close()
-        except: pass
+        try:
+            sess.env_mac.close()
+        except Exception:
+            pass
 
-    # Create env
     sess.env = gym.make(env_id, **env_params)
     _seed_env_everything(sess.env, SEED)
     sess.env.reset()
@@ -374,44 +933,82 @@ def create_envs_for_session(sess: Session, config_id: str):
     sess.env_mac = gym.make(mac_env_id, **env_params)
     _seed_env_everything(sess.env_mac, SEED)
 
-    # wrapper the env
-    reset_step = 100
-    sess.wrapper = SingleAgentWrapper_accept_keyboard_action(
-        sess.env_mac, agent_index=0, reset_step=reset_step
-    )
+    if n_agent == 2:
+        reset_step = 10000
+        sess.wrapper = SingleAgentWrapper_accept_keyboard_action(
+            sess.env_mac, agent_index=0, reset_step=reset_step
+        )
+    else:
+        sess.wrapper = None
 
-    # load the model
-    if is_practice:
+    if is_practice or is_solo:
         sess.chosen_policy_dir = None
         sess.chosen_ckpt_path = None
         sess.model = None
     else:
-        chosen_dir, ckpt_path = _pick_random_policy_checkpoint()
-        sess.chosen_policy_dir = chosen_dir
-        sess.chosen_ckpt_path = ckpt_path
-        sess.model = _load_or_get_model_by_ckpt_path(ckpt_path)
+        used_policy_names = _get_used_policy_names(sess, active_map_name)
+        should_pick = bool(choose_new_policy) or map_changed or (not sess.chosen_ckpt_path)
 
+        if should_pick:
+            if optimizer is not None:
+                logger.info(f"[POLICY - PICK] picking policy using optimization pipeline for map={active_map_name}")
+                mapped_trials = optimizer.ask()
+                checkpoint = mapped_trials[optimizer._actual_trial_idx]["policy"]
+                chosen_dir, ckpt_path = _pick_policy_checkpoint(
+                    checkpoint,
+                    policy_pool_dir=policy_pool_dir,
+                    policy_prefix=policy_prefix,
+                    checkpoint_filename=checkpoint_filename,
+                )
+                sess.chosen_policy_dir = chosen_dir
+                sess.chosen_ckpt_path = ckpt_path
+                sess.model = _load_or_get_model_by_ckpt_path(ckpt_path)
+            else:
+                logger.info(f"[POLICY - PICK] picking a random policy for map={active_map_name}")
+                chosen_dir, ckpt_path = _pick_random_policy_checkpoint(
+                    policy_pool_dir=policy_pool_dir,
+                    checkpoint_filename=checkpoint_filename,
+                    exclude_policy_names=used_policy_names,
+                )
+                sess.chosen_policy_dir = chosen_dir
+                sess.chosen_ckpt_path = ckpt_path
 
-    sess.obs = sess.wrapper.reset()
+            policy_name = os.path.basename(sess.chosen_policy_dir)
+            _remember_policy_name(sess, active_map_name, policy_name)
+            if policy_name not in sess.used_policy_names:
+                sess.used_policy_names.append(policy_name)
 
-    # log the config
-    if is_practice:
-        sess.config_id = "layout_practice"
-        sess.current_layout_id = "layout_practice"
-        sess.current_model_id  = "none"
+        sess.model = _load_or_get_model_by_ckpt_path(sess.chosen_ckpt_path)
+
+    if sess.wrapper is not None:
+        sess.obs = sess.wrapper.reset()
     else:
-        sess.config_id = config_id
-        sess.current_layout_id = "fixed_circle_5x5"
-        sess.current_model_id  = os.path.basename(sess.chosen_policy_dir)
+        _obs = sess.env_mac.reset()
+        try:
+            sess.obs = sess.env_mac._get_macro_obs()[0]
+        except Exception:
+            if isinstance(_obs, (list, tuple)) and len(_obs) > 0:
+                sess.obs = _obs[0]
+            else:
+                sess.obs = _obs
 
-    # reset the step count and reward
+    sess.config_id = "layout_practice" if is_practice else config_id
+    sess.current_layout_id = active_layout_id
+    sess.current_map_name = active_map_name
+    sess.current_map_type = active_map_type
+    sess.current_grid_dim = active_grid_dim
+
+    if is_practice:
+        sess.current_model_id = "none"
+    elif is_solo:
+        sess.current_model_id = "solo"
+    else:
+        sess.current_model_id = os.path.basename(sess.chosen_policy_dir)
+
     sess.cur_step = 0
     sess.cumulative_reward = 0.0
+    sess.ai_reward_total = 0.0
     sess.robot_steps = []
-
-
-
-
 
 # =========================
 # Collect the current state into a json.
@@ -420,6 +1017,7 @@ def extract_state(sess: Session):
     # env = sess.env
     env = sess.env_mac
     state = {
+        "cur_step": sess.cur_step,
         "xlen": env.xlen,
         "ylen": env.ylen,
         "map": env.map,
@@ -474,11 +1072,26 @@ def extract_state(sess: Session):
             "holding": get_type_name(holding) if holding else None,
             "holding_containing": get_contained_name(holding) if holding else None
         })
+    # If env has only 1 agent (human-alone), pad a dummy AI agent at index 0
+    # so the frontend can keep assuming agents[0]=AI, agents[1]=human.
+    if getattr(env, 'n_agent', None) == 1 and len(state['agents']) == 1:
+        human_agent = state['agents'][0]
+        human_agent['color'] = "blue"
+        dummy_ai = {"x": -1, "y": -1, "color": "gray", "holding": None, "holding_containing": None}
+        state['agents'] = [dummy_ai, human_agent]
+
     return state
 
 # =========================
 # Routing
 # =========================
+
+# 1. Route for the HTML file
+@app.route('/')
+def index():
+    # Points to Equilibrium_project/equilibrium_frontend.html
+    return send_from_directory(target_folder, 'equilibrium_frontend.html')
+
 @app.route('/new_session', methods=['POST'])
 def new_session():
     sid = SESSION_MGR.new_session()
@@ -488,26 +1101,120 @@ def new_session():
 def reset():
     data = request.get_json(silent=True) or {}
     sid = data.get('session_id')
+    prolific_raw = data.get('prolificId')
+    if not prolific_raw:
+        return jsonify(success=False, error="prolificId is required"), 400
+    prolific = prolific_raw.strip().replace('/', '_')
+
     if not sid:
         return jsonify(success=False, error="session_id is required"), 400
 
 
-    # Now, although I parse the config from the frontend, I never use them. I just use the fixed circle layout.
+    # Frontend episode metadata
     layout_id = data.get('layout_id')
     model_id  = data.get('model_id')
     config_id = data.get('config_id')
+    map_type = data.get('map_type')
+
+    selection_mode = str(data.get('selection_mode', 'bo')).strip().lower()
+    if selection_mode not in ('bo', 'control'):
+        selection_mode = 'bo'
+
+    # metadata (optional)
+    episode_index = data.get('episode_index', None)
+    round_in_episode = data.get('round_in_episode', None)
+    episode_phase = data.get('episode_phase', None)
+    new_episode = data.get('new_episode', None)
+    solo_episode = bool(data.get('solo_episode', False)) or (episode_phase == 'solo')
+
+    try:
+        episode_index_int = int(episode_index) if episode_index is not None else None
+    except Exception:
+        episode_index_int = None
+    try:
+        round_in_episode_int = int(round_in_episode) if round_in_episode is not None else None
+    except Exception:
+        round_in_episode_int = None
+
+    if new_episode is None:
+        # Heuristic default: the first round in an episode is round 1.
+        new_episode = (round_in_episode_int == 1)
+
+    is_practice = ((config_id or "layout_practice") == "layout_practice")
 
     sess = SESSION_MGR.ensure(sid)
+    # persist solo flag in the session
+    sess.solo_episode = bool(solo_episode)
+
+    if is_practice or sess.solo_episode or selection_mode == "control":
+        optimizer = None
+    else:
+        resolved_map_name, resolved_map_cfg = _get_experiment_map_config(
+            map_name=map_type,
+            layout_id=layout_id,
+            config_id=config_id,
+            sess=sess,
+        )
+
+        embedding_csv = resolved_map_cfg["embedding_csv"]
+
+        n_init = int(data.get('n_init'))
+        n_bo = int(data.get('n_bo'))
+        n_knn = int(data.get('n_knn'))
+
+        if not OPTIMIZER_MGR.optimizer_exists(prolific, resolved_map_name):
+            OPTIMIZER_MGR.create_optimizer(
+                prolific_id=prolific,
+                map_name=resolved_map_name,
+                embedding_csv=embedding_csv,
+                n_init=n_init,
+                n_bo=n_bo,
+                n_knn=n_knn,
+            )
+            logger.info(
+                f"[BACKEND - RESET] optimizer configured for prolific_id={prolific}, "
+                f"map={resolved_map_name}, embedding_csv={embedding_csv}"
+            )
+
+        optimizer = OPTIMIZER_MGR.get_optimizer(prolific, resolved_map_name)
+
+    
     with sess.lock:
         try:
-            create_envs_for_session(sess, config_id=(config_id or "IGNORED"))
+            # Force a new policy if the episode index changed.
+            episode_changed = (
+                episode_index_int is not None
+                and sess.episode_index is not None
+                and episode_index_int != sess.episode_index
+            )
+            choose_new_policy = (not is_practice) and (not sess.solo_episode) and (bool(new_episode) or episode_changed)
+
+            # Persist metadata in the session.
+            if episode_index_int is not None:
+                sess.episode_index = episode_index_int
+            sess.round_in_episode = round_in_episode_int
+            sess.episode_phase = episode_phase
+            create_envs_for_session(
+                sess,
+                config_id=(config_id or "layout_practice"),
+                choose_new_policy=choose_new_policy,
+                optimizer=optimizer,
+                is_solo=sess.solo_episode,
+                map_name=map_type,
+                layout_id=layout_id,
+            )
+        
         except Exception as e:
+            logger.exception(
+                f"[BACKEND - RESET - ERROR] sid={sid}, config_id={config_id}, map_type={map_type}, prolific={prolific}"
+            )
             return jsonify(success=False, error=str(e)), 400
 
         steps_left = MAX_STEPS
-        print(f"[RESET][{sid}] map_type={FIXED_MAP_TYPE} grid_dim={FIXED_GRID_DIM} "
-            f"chosen_policy_dir={sess.chosen_policy_dir} ckpt={sess.chosen_ckpt_path}")
-
+        logger.info(
+            f"[BACKEND - RESET] sid={sid}, episode={sess.episode_index}, round={sess.round_in_episode}, "
+            f"phase={sess.episode_phase}, map={sess.current_map_type}, grid={sess.current_grid_dim}, policy={sess.current_model_id}"
+        )
 
         return jsonify(
             success=True,
@@ -517,8 +1224,18 @@ def reset():
             config_id=sess.config_id,
             layout_id=sess.current_layout_id,
             model_id=sess.current_model_id,
-            chosen_policy_dir=sess.current_model_id,
-            chosen_ckpt=os.path.basename(sess.chosen_ckpt_path) if sess.chosen_ckpt_path else None
+            chosen_policy_dir=os.path.basename(sess.chosen_policy_dir) if sess.chosen_policy_dir else None,
+            chosen_ckpt=os.path.basename(sess.chosen_ckpt_path) if sess.chosen_ckpt_path else None,
+
+            episode_index=sess.episode_index,
+            round_in_episode=sess.round_in_episode,
+            episode_phase=sess.episode_phase,
+
+            map_type=sess.current_map_type,
+            selected_map=sess.current_map_name,
+            grid_dim=sess.current_grid_dim,
+            policy_id=sess.current_model_id,
+            selection_mode=selection_mode,
         )
 
 
@@ -536,77 +1253,234 @@ def key_event():
     layout_id = data.get('layout_id')
     model_id  = data.get('model_id')
     config_id = data.get('config_id')
+    map_type = data.get('map_type')
 
     sess = SESSION_MGR.ensure(sid)
     with sess.lock:
         # When the config id changes, hot switch the env.
-        if layout_id or model_id or config_id:
+        if layout_id or model_id or config_id or map_type:
             try:
-                target_cfg_id = _parse_config_id(layout_id=layout_id, model_id=model_id, config_id=config_id)
-                if target_cfg_id != sess.config_id:
-                    create_envs_for_session(sess, target_cfg_id)
-                    print(f"[HOT-SWITCH][{sid}] -> {target_cfg_id}")
+                target_cfg_id = sess.config_id or "layout_practice"
+                if config_id:
+                    target_cfg_id = config_id
+                elif layout_id and model_id:
+                    target_cfg_id = _parse_config_id(layout_id=layout_id, model_id=model_id)
+
+                if target_cfg_id == "layout_practice":
+                    target_map_name = "practice"
+                else:
+                    target_map_name = _infer_map_name(
+                        map_name=map_type,
+                        layout_id=layout_id,
+                        config_id=target_cfg_id,
+                        sess=sess,
+                    )
+
+                needs_switch = (
+                    target_cfg_id != sess.config_id
+                    or target_map_name != getattr(sess, "current_map_name", None)
+                )
+
+                if needs_switch:
+                    create_envs_for_session(
+                        sess,
+                        target_cfg_id,
+                        is_solo=getattr(sess, 'solo_episode', False),
+                        map_name=target_map_name,
+                        layout_id=layout_id,
+                    )
+                    logger.info(f"[BACKEND - HOT_SWITCH] sid={sid}, config={target_cfg_id}, map={target_map_name}")
             except Exception as e:
                 return jsonify(success=False, error=f"hot switch failed: {e}"), 400
             
         if not hasattr(sess, 'dishes_served'): sess.dishes_served = 0
         if sess.cur_step == 0: sess.dishes_served = 0
 
-        KEYS_ACTIONS = {'ArrowUp':3,'ArrowRight':0,'ArrowDown':1,'ArrowLeft':2}
+        KEYS_ACTIONS = {'ArrowUp': 3, 'ArrowRight': 0, 'ArrowDown': 1, 'ArrowLeft': 2, 'Stay': 4}
+
         if key in KEYS_ACTIONS:
-            # index 0 is AI, index 1 is the human user
-            if True:
-                t0 = time.time()
+            t0 = time.time()
+
+            human_low = int(KEYS_ACTIONS[key])
+            solo_mode = bool(getattr(sess, 'solo_episode', False)) or (getattr(sess.env, 'n_agent', 2) == 1)
+
+            if solo_mode:
+                # Human-alone: no AI model; step env with a single human action.
+                ai_action_int = 4
+                robot_low = 4
+                action = [robot_low, human_low]  # (AI placeholder, Human) for logging/score adjustment
+
+                try:
+                    obs_all, rewards_list, dones, info = sess.env_mac.step([human_low])
+                except Exception as e:
+                    return jsonify(success=False, error=f'solo step failed: {e}'), 400
+
+                try:
+                    sess.obs = sess.env_mac._get_macro_obs()[0]
+                except Exception:
+                    if isinstance(obs_all, (list, tuple)) and len(obs_all) > 0:
+                        sess.obs = obs_all[0]
+                    else:
+                        sess.obs = obs_all
+
+                # human-alone mode, use only the human agent's reward
+                if isinstance(rewards_list, (list, tuple, np.ndarray)):
+                    rewards = float(np.array(rewards_list).flatten()[0])
+                else:
+                    rewards = float(rewards_list)
+
+                robot_key = ACTION_TO_KEY.get(robot_low, 'Stay')
+                sess.robot_steps.append({
+                    'step': int(sess.cur_step + 1),
+                    'ai_macro_action': int(ai_action_int),
+                    'low_level_action': int(robot_low),
+                    'arrow': robot_key,
+                    'timestamp': time.time(),
+                })
+
+            else:
+                # Normal human+AI: run policy -> macro action -> low-level action -> step wrapper
+                benev_up = 0.0
+                benev_down = 0.0
+                ai_prev_loc = [sess.env_mac.agent[0].x, sess.env_mac.agent[0].y]
+
                 if sess.model is not None:
                     with torch.no_grad():
                         ai_action, _ = sess.model.predict(sess.obs, deterministic=True)
-                    ai_action_int = _as_int_action(ai_action)   # convert action to integer
+                    ai_action_int = _as_int_action(ai_action)
                 else:
-                    ai_action_int = 4  # stay
-                t1 = time.time()
+                    # No model loaded (practice), keep a placeholder macro id
+                    ai_action_int = 4
 
+                # Compute low-level actions from macro action (and get executed macro actions when available)
                 if sess.model is not None:
-                    primitive_action, _ = sess.env_mac._computeLowLevelActions([ai_action_int, 0])
+                    ll_ret = sess.env_mac._computeLowLevelActions([ai_action_int, 0])
+
+                    # handle both possible return formats robustly
+                    if isinstance(ll_ret, (list, tuple)) and len(ll_ret) == 2:
+                        primitive_action, real_execute_macro_actions = ll_ret
+                    else:
+                        primitive_action = ll_ret
+                        real_execute_macro_actions = [ai_action_int, 0]
+
+                    # Gaia, please see here: cooperation/benevolence bonus (one-time)
+                    try:
+                        benev_up, benev_down, sess.wrapper.firsttime_down_go_to_counter, sess.wrapper.firsttime_up_get_counter_lettuce = \
+                            check_action_benevolence(
+                                sess.env_mac,
+                                real_execute_macro_actions[0],
+                                real_execute_macro_actions[1],
+                                sess.wrapper.firsttime_down_go_to_counter,
+                                sess.wrapper.firsttime_up_get_counter_lettuce
+                            )
+                    except Exception:
+                        benev_up, benev_down = 0.0, 0.0
                 else:
                     primitive_action = [4] * sess.env.n_agent
 
                 action = [4] * sess.env.n_agent
-                action[1] = KEYS_ACTIONS[key]
-                action[0] = primitive_action[0]
+                action[1] = human_low
+                action[0] = int(primitive_action[0])
 
-                # record the robot's step
                 robot_low = int(action[0])
-                robot_key = ACTION_TO_KEY.get(robot_low, "Unknown")
+                robot_key = ACTION_TO_KEY.get(robot_low, 'Unknown')
                 sess.robot_steps.append({
-                    "step": int(sess.cur_step + 1),
-                    "ai_macro_action": ai_action_int,
-                    "low_level_action": robot_low,
-                    "arrow": robot_key,
-                    "timestamp": time.time(),
+                    'step': int(sess.cur_step + 1),
+                    'ai_macro_action': int(ai_action_int),
+                    'low_level_action': robot_low,
+                    'arrow': robot_key,
+                    'timestamp': time.time(),
                 })
-
-
 
                 sess.obs, rewards, dones, info = sess.wrapper.step(action[0], action[1])
 
+                # determine if AI moved this step (for step-penalty shaping)
+                ai_cur_loc = [sess.env_mac.agent[0].x, sess.env_mac.agent[0].y]
+                ai_moved = (ai_prev_loc != ai_cur_loc)
+
+            r_env = 0.0
+            r_adjusted = 0.0
+
+
+            ai_reward_raw = None
+            human_reward_raw = None
+            ai_reward_adjusted = None
+            human_reward_adjusted = None
+            try:
+                if isinstance(rewards, (list, tuple, np.ndarray)):
+                    r_env = float(np.array(rewards).flatten()[0])
+                
+                else:
+                    r_env = float(rewards)
+
                 try:
-                # Robustly handle rewards (Scalar, List, or Numpy Array)
-                    if isinstance(rewards, (list, tuple, np.ndarray)):
-                        r_flat = np.array(rewards).flatten()
-                        r = float(r_flat[0])
+                    step_pen_ai = float(sess.env_mac.rewardList[0].get("step penalty", 0))
+                    step_pen_hu = float(sess.env_mac.rewardList[1].get("step penalty", 0))
+                except Exception:
+                    step_pen_ai = -1.0
+                    step_pen_hu = -1.0
+
+                # compensate "Stay" actions so they don't subtract points
+                ai_low = int(action[0]) if (not solo_mode) else None
+                human_low2 = int(action[1])
+
+
+                # Per-agent raw rewards (agent 0 = AI, agent 1 = Human)
+                if solo_mode:
+                    ai_reward_raw = 0.0
+                    human_reward_raw = float(r_env)
+                else:
+                    rr = getattr(sess.wrapper, 'last_raw_rewards', None)
+                    if isinstance(rr, (list, tuple, np.ndarray)) and len(rr) >= 2:
+                        rr = np.array(rr).flatten()
+                        ai_reward_raw = float(rr[0])
+                        human_reward_raw = float(rr[1])
+                r_adjusted = r_env
+                if (not solo_mode) and (ai_low == 4):
+                    r_adjusted += (-step_pen_ai)  # add back +1 if penalty is -1
+                if human_low2 == 4:
+                    r_adjusted += (-step_pen_hu)
+
+
+                # Per-agent adjusted rewards (compensate Stay actions like adjusted_reward)
+                ai_reward_adjusted = ai_reward_raw
+                human_reward_adjusted = human_reward_raw
+                if (ai_reward_adjusted is not None) and (not solo_mode) and (ai_low == 4):
+                    ai_reward_adjusted += (-step_pen_ai)
+                if (human_reward_adjusted is not None) and (human_low2 == 4):
+                    human_reward_adjusted += (-step_pen_hu)
+
+                sess.cumulative_reward += r_adjusted
+
+                # accumulate AI-only reward for BayesOpt (server-side)
+                if not solo_mode:
+                    try:
+                        step_penalty_str, cooperation_bonus_str = parse_policy_id(sess.current_model_id or "")
+                        step_penalty = float(step_penalty_str)
+                        cooperation_bonus = (cooperation_bonus_str == "True")
+                    except Exception:
+                        step_penalty = 0.0
+                        cooperation_bonus = False
+
+                    moved = bool(locals().get('ai_moved', False))
+                    benev_up_local = float(locals().get('benev_up', 0.0))
+                    move_cost = step_penalty if moved else 0.0
+                    team_reward = float(r_env)
+                    if cooperation_bonus:
+                        ai_step_reward = team_reward - move_cost + benev_up_local
                     else:
-                        r = float(rewards)
+                        ai_step_reward = team_reward - move_cost
+                    sess.ai_reward_total += float(ai_step_reward)
 
-                    sess.cumulative_reward += r
-                
-                    if r >= 199:
-                        sess.dishes_served += 1
-                        print(f"[{sid}] DISH SERVED! Total: {sess.dishes_served}")
+                # dish served detection
+                if r_env >= 150:
+                    sess.dishes_served += 1
+                    logger.info(f"[BACKEND - KEY_EVENT] sid={sid}, dish_served! total={sess.dishes_served}")
 
-                except Exception as e:
-                    print(f"Error updating rewards: {e}")
+            except Exception as e:
+                logger.info(f"[BACKEND - KEY_EVENT] error updating rewards: {e}")
                 
-                sess.cur_step += 1
+            sess.cur_step += 1
 
         state = extract_state(sess)
         steps_left = max(0, MAX_STEPS - sess.cur_step)
@@ -615,12 +1489,90 @@ def key_event():
             state=state,
             steps_left=steps_left,
             cumulative_reward=sess.cumulative_reward,
+            raw_reward=r_env,
+            adjusted_reward=r_adjusted,
+            # Explicit reward breakdown for logging
+            team_reward_raw=r_env,
+            team_reward_adjusted=r_adjusted,
+            ai_reward_raw=ai_reward_raw,
+            human_reward_raw=human_reward_raw,
+            ai_reward_adjusted=ai_reward_adjusted,
+            human_reward_adjusted=human_reward_adjusted,
             config_id=sess.config_id,
             layout_id=sess.current_layout_id,
             model_id=sess.current_model_id,
             dishes_served=sess.dishes_served,
             robot_last_action=(sess.robot_steps[-1] if sess.robot_steps else None)
         )
+
+
+@app.route('/tell', methods=['POST'])
+def tell():
+    data = request.get_json(silent=True) or {}
+    prolific_raw = data.get('prolificId')
+    if not prolific_raw:
+        return jsonify(success=False, error="prolific_id is required"), 400
+    prolific = prolific_raw.strip().replace('/', '_')
+
+    selection_mode = str(data.get('selection_mode', 'bo')).strip().lower()
+    if selection_mode == 'control':
+        return jsonify(success=True, skipped=True)
+
+    # Preferred: use server-side AI reward (computed in /key_event) for BO.
+    sid = data.get('session_id')
+    score_raw = data.get('score')
+
+    if score_raw is not None:
+        try:
+            score = float(score_raw)
+        except Exception:
+            return jsonify(success=False, error="score must be numeric"), 400
+    else:
+        if not sid:
+            return jsonify(success=False, error="session_id is required when score is not provided"), 400
+        sess = SESSION_MGR.ensure(sid)
+        with sess.lock:
+            score = float(getattr(sess, 'ai_reward_total', 0.0))
+
+    map_name = data.get('map_type')
+    if not map_name and sid:
+        sess = SESSION_MGR.ensure(sid)
+        map_name = getattr(sess, "current_map_name", None)
+
+    if not map_name:
+        return jsonify(success=False, error="map_type is required for optimizer lookup"), 400
+
+    if not OPTIMIZER_MGR.optimizer_exists(prolific, map_name):
+        return jsonify(
+            success=False,
+            error=f"optimizer not found for prolificId={prolific}, map={map_name}"
+        ), 400
+
+    optimizer = OPTIMIZER_MGR.get_optimizer(prolific, map_name)
+    trial_idx = optimizer._actual_trial_idx
+    optimizer.tell({trial_idx: score})
+    return jsonify(success=True)
+
+
+@app.route('/close_optimizer', methods=['POST'])
+def close_optimizer():
+    data = request.get_json(silent=True) or {}
+    prolific = (data.get('prolificId') or 'anon').strip().replace('/', '_')
+    if not prolific:
+        return jsonify(success=False, error="prolific_id is required"), 400
+
+    to_delete = []
+    for key, optimizer in OPTIMIZER_MGR.optimizers.items():
+        pid, _map = key
+        if pid == prolific:
+            optimizer.close()
+            to_delete.append(key)
+
+    for key in to_delete:
+        del OPTIMIZER_MGR.optimizers[key]
+
+    return jsonify(success=True)
+
 
 @app.route('/get_state', methods=['GET', 'POST'])
 def get_state():
@@ -641,6 +1593,7 @@ def get_state():
     with sess.lock:
         return jsonify(success=True, state=extract_state(sess))
 
+
 @app.route('/submit_log', methods=['POST'])
 def submit_log():
     """Receive the logData json from the frontend, and save the json to the server. Then return the Prolific completion code."""
@@ -650,17 +1603,32 @@ def submit_log():
         if not isinstance(log_payload, dict) or 'rounds' not in log_payload:
             return jsonify(success=False, error="Invalid payload: 'rounds' missing"), 400
 
+        # Prolific completion code.
+        completion_code = "CK4KW637"
 
-        # Prolific completion code. remember change to your code.
-        completion_code = "C108AMXR"
+        prolific = log_payload.get('prolificId').strip().replace('/', '_')
 
+        # Create a folder for this participant
+        participant_dir = os.path.join('submissions', prolific)
+        os.makedirs(participant_dir, exist_ok=True)
 
-        os.makedirs('submissions', exist_ok=True)
-        ts = dt.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
-        prolific = (log_payload.get('prolificId') or 'anon').strip().replace('/', '_')
-        filename = f"submissions/{ts}_{prolific}_{completion_code}.json"
-        with open(filename, 'w', encoding='utf-8') as f:
+        # Save final_result.json in the participant's folder
+        result_filename = os.path.join(participant_dir, 'final_result.json')
+        with open(result_filename, 'w', encoding='utf-8') as f:
             json.dump(log_payload, f, ensure_ascii=False, indent=2)
+
+        # Save BayesOpt state(s) for this participant, if any exist
+        for (pid, map_name), optimizer in OPTIMIZER_MGR.optimizers.items():
+            if pid != prolific:
+                continue
+
+            optimizer_filename = os.path.join(participant_dir, f'bayesopt_state_{map_name}.json')
+            try:
+                optimizer.save(optimizer_filename)
+            except Exception as e:
+                logger.info(
+                    f"[BACKEND - SUBMIT] warning: could not save BayesOpt state for {prolific}, map={map_name}: {e}"
+                )
 
         return jsonify(success=True, completion_code=completion_code)
     except Exception as e:
@@ -670,6 +1638,10 @@ def submit_log():
 # run the server
 # =========================
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    app.run(host='0.0.0.0', port=5000, debug=True)
+#     app.run(host='0.0.0.0', port=5000, debug=True)
+
+if __name__ == '__main__':
+    from waitress import serve
+    serve(app, host='0.0.0.0', port=5000, threads=8)

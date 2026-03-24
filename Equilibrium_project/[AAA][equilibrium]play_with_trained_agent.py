@@ -74,7 +74,7 @@ def main():
     pygame.display.set_caption("Overcooked Control")
 
     # mac_env_id = 'Overcooked-MA-equilibrium-v0'
-    mac_env_id = 'Overcooked-MA-equilibrium-v2'
+    mac_env_id = 'Overcooked-MA-equilibrium-v3'
 
 
     rewardList = [{
@@ -134,7 +134,7 @@ def main():
 
 
     # Load the agent model
-    agent_model = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_1_a1sp_5_helping_True_gamma0.9_0.8/model_1500000", env=env_agent_0)
+    agent_model = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent0_a0sp_1_a1sp_3_helping_False_gamma0.9_0.95/model_1500000", env=env_agent_0)
     
     obs = env_agent_0.reset()
     env.reset()

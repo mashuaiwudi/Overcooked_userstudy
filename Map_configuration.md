@@ -1,0 +1,5 @@
+| Map       | Policy Dir              | Policy Prefix                         | Step Penalty     | Cooperation Bonus | Gamma              | Training Steps | Map Type  | Grid Dim | mac_env_id                      |
+|-----------|------------------------|--------------------------------------|------------------|-------------------|--------------------|----------------|-----------|----------|----------------------------------|
+| Circle    | policy_pool            | [equilibrium]agent0_                 | 0, -1, -3        | 100               | 0.9, 0.95, 0.99    | 500000         | circle    | [5, 5]   | Overcooked-MA-equilibrium-v0    |
+| Counter   | policy_pool_newmap2    | [equilibrium][counter]agent0_        | 0, -1, -5        | 1000              | 0.8, 0.9, 0.95     | 1500000        | counter   | [5, 8]   | Overcooked-MA-equilibrium-v1    |
+| Thinpath  | policy_pool_thinpath   | [equilibrium][thinpath]agent0_       | 0, -1, -3        | 1000              | 0.8, 0.9, 0.95     | 1500000        | thinpath  | [5, 7]   | Overcooked-MA-equilibrium-v2    |

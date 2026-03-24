@@ -205,3 +205,17 @@ And you need to change `mac_env_id` to `Overcooked-MA-equilibrium-v3`
 ```bash
 mac_env_id = 'Overcooked-MA-equilibrium-v3'
 ```
+
+
+
+## 20260324: Added a description of 3 maps: Map_configuration.md
+
+For different map, the cooperation bonus can be different.
+In Gaia's original ```backend_new.py```, the cooperation_bonus always use ```check_action_benevolence()``` function. However, different functions should be used for different maps.
+
+Please see the updated ```backend_NEW.py```:
+- check_action_benevolence_circle(env, action_up, action_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce)
+- check_action_benevolence_counter(env, action_up, action_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce)
+- check_action_benevolence_thinpath(env, action_up, action_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce)
+
+Gaia, please change the cooperation_bonus calculation based on the specific map.
