@@ -413,7 +413,7 @@ def check_action_benevolence_circle(env, action_up, action_down, firsttime_down_
             reward_shaping_bonus = check_benevolence(env, best_action, action_up)
             if reward_shaping_bonus == 20:
                 total_reward_bonus += reward_shaping_bonus
-                reward_bonus_up = 100
+                reward_bonus_up = 1000
                 firsttime_up_get_counter_lettuce = False
 
 
@@ -428,7 +428,7 @@ def check_action_benevolence_circle(env, action_up, action_down, firsttime_down_
 
                 if reward_shaping_bonus == 20:
                     total_reward_bonus += reward_shaping_bonus
-                    reward_bonus_down = 100
+                    reward_bonus_down = 1000
                     firsttime_down_go_to_counter = False
 
     return reward_bonus_up, reward_bonus_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce
@@ -661,23 +661,22 @@ import re
 
 def parse_policy_id(policy_id: str):
     """
-    Parse step_penalty (AAA) and cooperation_bonus (CCC) from policy_id
+    Parse step_penalty0 and helping0 bonus from policy_id
 
     policy_id format:
-    [equilibrium]agent0_a0sp_AAA_a1sp_BBB_helping_CCC_gammaDDD_EEE
-    
+    [equilibrium][MAP_NAME]agent0_a0sp_STEPPENALTY0_a1sp_STEPPENALTY1_helping0_BONUS0_helping1_BONUS1_gammaAAA_BBB
     """
 
-    pattern = r"a0sp_([^_]+).*?helping_([^_]+)"
+    pattern = r"a0sp_([^_]+).*?helping0_([^_]+)"
     match = re.search(pattern, policy_id)
 
     if not match:
         raise ValueError(f"Invalid policy_id format: {policy_id}")
 
-    step_penalty = match.group(1)
-    cooperation_bonus = match.group(2)
+    step_penalty0 = match.group(1)
+    bonus0 = match.group(2)
 
-    return step_penalty, cooperation_bonus
+    return step_penalty0, bonus0
 
 
 # =========================

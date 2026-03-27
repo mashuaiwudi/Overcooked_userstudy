@@ -367,7 +367,7 @@ def format_time(seconds: float) -> str:
     return f"{minutes}分{secs}秒"
 
 
-def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping: bool):
+def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping0: bool, helping1: bool):
     # ====== 你的 rewardList / env_params ======
     rewardList = [{
         "minitask finished": 0,
@@ -401,10 +401,10 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
         "pick up bad lettuce": 0
     }]
 
-    # mac_env_id = "Overcooked-MA-equilibrium-v2"
-    mac_env_id = "Overcooked-MA-equilibrium-v3"
+    mac_env_id = "Overcooked-MA-equilibrium-v2"
+    # mac_env_id = "Overcooked-MA-equilibrium-v3"
 
-    
+
     env_params = {
         "grid_dim": [5, 7],
         "task": ["lettuce salad"],
@@ -417,14 +417,14 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
     }
 
     # ====== 为每个组合单独建 log/save 目录，避免覆盖 ======
-    combo_tag = f"a0sp_{step_penalty_agent0}_a1sp_{step_penalty_agent1}_helping_{helping}_gamma0.9_0.95"
+    combo_tag = f"a0sp_{step_penalty_agent0}_a1sp_{step_penalty_agent1}_helping0_{helping0}_helping1_{helping1}_gamma0.9_0.95"
 
     log_dir = os.path.join("logs", combo_tag)
     os.makedirs(log_dir, exist_ok=True)
     new_logger = configure(log_dir, ["csv", "tensorboard"])  # 不输出 stdout
 
-    save_dir_agent0 = os.path.join("final_trained_models", f"[equilibrium][thinpath2]agent0_{combo_tag}")
-    save_dir_agent1 = os.path.join("final_trained_models", f"[equilibrium][thinpath2]agent1_{combo_tag}")
+    save_dir_agent0 = os.path.join("final_trained_models", f"[equilibrium][thinpath]agent0_{combo_tag}")
+    save_dir_agent1 = os.path.join("final_trained_models", f"[equilibrium][thinpath]agent1_{combo_tag}")
 
     reward_callback_0 = EpisodeRewardCallback(save_dir_agent0)
     reward_callback_1 = EpisodeRewardCallback(save_dir_agent1)
@@ -441,7 +441,7 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
         agent_index=0,
         step_penalty_agent0=step_penalty_agent0,
         step_penalty_agent1=step_penalty_agent1,
-        helping = helping,
+        helping = helping0,
         other_agent_model=None
     )
     env_agent_1 = SingleAgentWrapper(
@@ -449,7 +449,7 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
         agent_index=1,
         step_penalty_agent0=step_penalty_agent0,
         step_penalty_agent1=step_penalty_agent1,
-        helping = helping,
+        helping = helping1,
         other_agent_model=None
     )
 
@@ -521,7 +521,7 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
             agent_index=0,
             step_penalty_agent0=step_penalty_agent0,
             step_penalty_agent1=step_penalty_agent1,
-            helping = helping,
+            helping = helping0,
             other_agent_model=model_agent_1
         )
         model_agent_0.set_env(env_agent_0)
@@ -533,7 +533,7 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
             agent_index=1,
             step_penalty_agent0=step_penalty_agent0,
             step_penalty_agent1=step_penalty_agent1,
-            helping = helping,
+            helping = helping1,
             other_agent_model=model_agent_0
         )
         model_agent_1.set_env(env_agent_1)
@@ -552,19 +552,27 @@ def train_one_combo(step_penalty_agent0: int, step_penalty_agent1: int, helping:
 
 
 def main():
-    # ====== 批处理：25 个组合，每个组合训练 agent0 + agent1 两个模型 => 2*25 个模型 ======
-    helping = [True, False]
-    # step_penalty_list_agent0 = [0, 1, 10, 20, 50]
+    helping0 = [True, False]
+    helping1 = [True, False]
+
     step_penalty_list_agent0 = [0, 1, 3]
     step_penalty_list_agent1 = [0, 1, 3]
 
-    for help_partner in helping:
-        for sp0 in step_penalty_list_agent0:
-            for sp1 in step_penalty_list_agent1:
-                # if (sp0 == 0 and sp1 == 0) or (sp0 == 0 and sp1 == 1):
-                #     continue
-                train_one_combo(step_penalty_agent0=sp0, step_penalty_agent1=sp1, helping = help_partner)
+    for help_partner0 in helping0:
+        for help_partner1 in helping1:
+            
+            # 跳过相同的情况（True-True 或 False-False）
+            if help_partner0 == help_partner1:
+                continue
 
+            for sp0 in step_penalty_list_agent0:
+                for sp1 in step_penalty_list_agent1:
+                    train_one_combo(
+                        step_penalty_agent0=sp0,
+                        step_penalty_agent1=sp1,
+                        helping0=help_partner0,
+                        helping1=help_partner1
+                    )
 
 if __name__ == "__main__":
     main()

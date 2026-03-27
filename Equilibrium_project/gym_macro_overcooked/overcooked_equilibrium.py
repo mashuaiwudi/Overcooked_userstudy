@@ -150,14 +150,14 @@ class Overcooked_equilibrium(gym.Env):
                             [7, 0, 0, 0, 1],
                             [1, 1, 1, 1, 1]] 
                 # ITEMIDX= {"space": 0, "counter": 1, "agent": 2, "tomato": 3, "lettuce": 4, "plate": 5, "knife": 6, "delivery": 7, "onion": 8}
-                elif self.mapType == "circle":
+                elif self.mapType == "circle_old":
                     map =  [[1, 1, 1, 6, 1],
                             [1, 0, 0, 2, 5],
                             [1, 0, 1, 0, 5],
                             [4, 2, 0, 0, 1],
                             [1, 4, 7, 1, 1]] 
                     
-                elif self.mapType == "circle2":
+                elif self.mapType == "circle":
                     map =  [[1, 1, 1, 7, 1],
                             [1, 0, 0, 2, 5],
                             [6, 0, 1, 0, 5],

@@ -219,3 +219,35 @@ Please see the updated ```backend_NEW.py```:
 - check_action_benevolence_thinpath(env, action_up, action_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce)
 
 Gaia, please change the cooperation_bonus calculation based on the specific map.
+
+
+
+
+## 20260327: Final policy pools on 3 maps
+
+The final policy pools are:
+
+- final_policy_pool_circle
+- final_policy_pool_counter
+- final_policy_pool_thinpath
+
+-------
+You need do:
+
+1. Update `overcooked_equilibrium.py`
+2. Update `overcooked_MA_equilibrium.py`
+3. Update `overcooked_MA_equilibrium_counter.py`
+4. Update `overcooked_MA_equilibrium_thinpath.py`
+
+5. In backend_NEW.py, update `def parse_policy_id(policy_id: str)`
+6. In backend_NEW.py, update `check_action_benevolence_circle()`
+7. In backend_NEW.py, update `check_action_benevolence_counter()`
+8. In backend_NEW.py, update `check_action_benevolence_thinpath()`
+
+### The latest configuration of 3 maps/policies
+
+| Map       | Policy Dir              | Policy Prefix                         | Step Penalty     | Cooperation Bonus | Gamma              | Training Steps | Map Type  | Grid Dim | mac_env_id                      |
+|-----------|------------------------|--------------------------------------|------------------|-------------------|--------------------|----------------|-----------|----------|----------------------------------|
+| Circle    | final_policy_pool_circle     | [equilibrium][circle]agent0_         | 0, -1, -3        | 1000               | 0.8, 0.9, 0.95    | 500000         | circle    | [5, 5]   | Overcooked-MA-equilibrium-v0    |
+| Counter   | final_policy_pool_counter    | [equilibrium][counter]agent0_        | 0, -1, -3        | 1000              | 0.8, 0.9, 0.95     | 1500000        | counter   | [5, 8]   | Overcooked-MA-equilibrium-v1    |
+| Thinpath  | final_policy_pool_thinpath   | [equilibrium][thinpath]agent0_       | 0, -1, -3        | 1000              | 0.8, 0.9, 0.95     | 1500000        | thinpath  | [5, 7]   | Overcooked-MA-equilibrium-v2    |

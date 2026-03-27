@@ -86,12 +86,12 @@ def main():
     }]
 
     env_params = {
-        # 'grid_dim': [5, 5],
-        'grid_dim': [5, 7],
+        'grid_dim': [5, 5],
+        # 'grid_dim': [5, 7],
         'task': ["lettuce salad"],
         'rewardList': rewardList,
-        # 'map_type': "circle",
-        'map_type': "thinpath",
+        'map_type': "circle",
+        # 'map_type': "thinpath",
         'n_agent': 2,
         'obs_radius': 0,
         'mode': "vector",
