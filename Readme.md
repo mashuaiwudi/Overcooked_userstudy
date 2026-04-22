@@ -232,13 +232,13 @@ The final policy pools are:
 - final_policy_pool_thinpath
 
 -------
-You need do:
-
+### Some python files need update:
 1. Update `overcooked_equilibrium.py`
 2. Update `overcooked_MA_equilibrium.py`
 3. Update `overcooked_MA_equilibrium_counter.py`
 4. Update `overcooked_MA_equilibrium_thinpath.py`
 
+### Also, the AI reward part is updated:
 5. In backend_NEW.py, update `def parse_policy_id(policy_id: str)`
 6. In backend_NEW.py, update `check_action_benevolence_circle()`
 7. In backend_NEW.py, update `check_action_benevolence_counter()`
@@ -251,3 +251,13 @@ You need do:
 | Circle    | final_policy_pool_circle     | [equilibrium][circle]agent0_         | 0, -1, -3        | 1000               | 0.8, 0.9, 0.95    | 500000         | circle    | [5, 5]   | Overcooked-MA-equilibrium-v0    |
 | Counter   | final_policy_pool_counter    | [equilibrium][counter]agent0_        | 0, -1, -3        | 1000              | 0.8, 0.9, 0.95     | 1500000        | counter   | [5, 8]   | Overcooked-MA-equilibrium-v1    |
 | Thinpath  | final_policy_pool_thinpath   | [equilibrium][thinpath]agent0_       | 0, -1, -3        | 1000              | 0.8, 0.9, 0.95     | 1500000        | thinpath  | [5, 7]   | Overcooked-MA-equilibrium-v2    |
+
+
+
+
+
+
+## 20260422: Train AI policy on `counter` map with coplay
+
+`final_policy_pool_counter_coplay` contains the new policy pool. Use them as usual.
+
