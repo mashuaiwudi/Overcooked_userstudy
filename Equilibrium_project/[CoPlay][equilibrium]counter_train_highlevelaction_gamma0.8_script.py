@@ -474,7 +474,7 @@ def train_one_combo(step_penalty_agent0: int,
         "pick up bad lettuce": 0
     }]
 
-    mac_env_id = "Overcooked-MA-equilibrium-v1"
+    mac_env_id = "Overcooked-MA-equilibrium-v4"
     env_params = {
         "grid_dim": [5, 8],
         "task": ["lettuce salad"],
@@ -498,7 +498,7 @@ def train_one_combo(step_penalty_agent0: int,
 
     save_dir_agent0 = os.path.join(
         "final_trained_models",
-        f"[coplay][equilibrium][counter]agent0_{combo_tag}"
+        f"[coplay][flexible][counter]agent0_{combo_tag}"
     )
     os.makedirs(save_dir_agent0, exist_ok=True)
 
@@ -551,7 +551,7 @@ def train_one_combo(step_penalty_agent0: int,
 
     model_agent_0.set_logger(new_logger)
 
-    total_train_steps = 1_500_000
+    total_train_steps = 5_000_000
 
     global_start_time = time.time()
     print(f"\n==================== Training combo: {combo_tag} ====================")
@@ -591,3 +591,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

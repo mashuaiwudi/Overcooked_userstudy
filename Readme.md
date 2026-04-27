@@ -261,3 +261,14 @@ The final policy pools are:
 
 `final_policy_pool_counter_coplay` contains the new policy pool. Use them as usual.
 
+
+
+## 20260427: Train AI policy on `counter` map with coplay and flexible item choice - 5M steps
+
+`final_policy_pool_counter_coplay2` contains the new policy pool. The policy model is `model_5000000`
+
+Be sure to update `gym_macro_overcooked/overcooked_MA_equilibrium_counter_flexible.py` and `gym_macro_overcooked/__init__.py`
+
+### And change the `mac_env_id = 'Overcooked-MA-equilibrium-v4'`!!!!!!!!!!!!!!
+
+

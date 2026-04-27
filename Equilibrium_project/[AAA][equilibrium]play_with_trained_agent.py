@@ -74,7 +74,7 @@ def main():
     pygame.display.set_caption("Overcooked Control")
 
     # mac_env_id = 'Overcooked-MA-equilibrium-v0'
-    mac_env_id = 'Overcooked-MA-equilibrium-v3'
+    mac_env_id = 'Overcooked-MA-equilibrium-v4'
 
 
     rewardList = [{
@@ -110,16 +110,14 @@ def main():
     }]
 
     env_params = {
-        # 'grid_dim': [5, 5],
-        'grid_dim': [5, 7],
-        'task': ["lettuce salad"],
-        'rewardList': rewardList,
-        # 'map_type': "circle",
-        'map_type': "thinpath",
-        'n_agent': 2,
-        'obs_radius': 0,
-        'mode': "vector",
-        'debug': True
+        "grid_dim": [5, 8],
+        "task": ["lettuce salad"],
+        "rewardList": rewardList,
+        "map_type": "counter",
+        "n_agent": 2,
+        "obs_radius": 0,
+        "mode": "vector",
+        "debug": True
     }
 
 
@@ -134,7 +132,27 @@ def main():
 
 
     # Load the agent model
-    agent_model = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent0_a0sp_1_a1sp_3_helping_False_gamma0.9_0.95/model_1500000", env=env_agent_0)
+
+    # [coplay][flexible][counter]agent0_a0sp_0_helping0_False_gamma0.8
+    # [coplay][flexible][counter]agent0_a0sp_0_helping0_False_gamma0.9
+    # [coplay][flexible][counter]agent0_a0sp_0_helping0_False_gamma0.95
+    # [coplay][flexible][counter]agent0_a0sp_0_helping0_True_gamma0.8
+    # [coplay][flexible][counter]agent0_a0sp_0_helping0_True_gamma0.9
+    # [coplay][flexible][counter]agent0_a0sp_0_helping0_True_gamma0.95
+    # [coplay][flexible][counter]agent0_a0sp_1_helping0_False_gamma0.8
+    # [coplay][flexible][counter]agent0_a0sp_1_helping0_False_gamma0.9
+    # [coplay][flexible][counter]agent0_a0sp_1_helping0_False_gamma0.95
+    # [coplay][flexible][counter]agent0_a0sp_1_helping0_True_gamma0.8
+    # [coplay][flexible][counter]agent0_a0sp_1_helping0_True_gamma0.9
+    # [coplay][flexible][counter]agent0_a0sp_1_helping0_True_gamma0.95
+    # [coplay][flexible][counter]agent0_a0sp_3_helping0_False_gamma0.8
+    # [coplay][flexible][counter]agent0_a0sp_3_helping0_False_gamma0.9
+    # [coplay][flexible][counter]agent0_a0sp_3_helping0_False_gamma0.95
+    # [coplay][flexible][counter]agent0_a0sp_3_helping0_True_gamma0.8
+    # [coplay][flexible][counter]agent0_a0sp_3_helping0_True_gamma0.9
+    # [coplay][flexible][counter]agent0_a0sp_3_helping0_True_gamma0.95
+
+    agent_model = PPO.load("../final_policy_pool_counter_coplay2/[coplay][flexible][counter]agent0_a0sp_3_helping0_False_gamma0.95/model_5000000", env=env_agent_0)
     
     obs = env_agent_0.reset()
     env.reset()
