@@ -272,3 +272,12 @@ Be sure to update `gym_macro_overcooked/overcooked_MA_equilibrium_counter_flexib
 ### And change the `mac_env_id = 'Overcooked-MA-equilibrium-v4'`!!!!!!!!!!!!!!
 
 
+
+## 20260429: Train AI policy on `thinpath` and `circle` map with coplay and flexible item choice - 5M steps
+
+`final_policy_pool_thinpath_coplay` and `final_policy_pool_circle_coplay` contains the new policy pool. The policy model is `model_5000000`
+
+Be sure to update `gym_macro_overcooked/overcooked_MA_equilibrium_counter_flexible.py` and `gym_macro_overcooked/__init__.py`
+
+### Change the `mac_env_id = 'Overcooked-MA-equilibrium-v3'` for `thinpath`
+### Change the `mac_env_id = 'Overcooked-MA-equilibrium-v5'` for `circle`

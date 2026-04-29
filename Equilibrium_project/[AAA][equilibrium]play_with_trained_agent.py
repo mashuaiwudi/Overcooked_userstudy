@@ -152,7 +152,7 @@ def main():
     # [coplay][flexible][counter]agent0_a0sp_3_helping0_True_gamma0.9
     # [coplay][flexible][counter]agent0_a0sp_3_helping0_True_gamma0.95
 
-    agent_model = PPO.load("../final_policy_pool_counter_coplay2/[coplay][flexible][counter]agent0_a0sp_3_helping0_False_gamma0.95/model_5000000", env=env_agent_0)
+    agent_model = PPO.load("../final_policy_pool_counter_coplay2/[coplay][flexible][counter]agent0_a0sp_3_helping0_True_gamma0.8/model_5000000", env=env_agent_0)
     
     obs = env_agent_0.reset()
     env.reset()

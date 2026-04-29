@@ -3,9 +3,9 @@ import shutil
 import pandas as pd
 
 # ========= 配置区 =========
-xlsx_path = "files.xlsx"
-target_dir = r"co_play_partner_pool_counter"   # 改成你的目标路径
-prefix = "[equilibrium][counter]agent1_"
+xlsx_path = "files_circle.xlsx"
+target_dir = r"co_play_partner_pool_circle"   # 改成你的目标路径
+prefix = "[equilibrium][circle]agent1_"
 dry_run = False   # 先设为 True 预览；确认无误后改成 False 真删
 # =========================
 
