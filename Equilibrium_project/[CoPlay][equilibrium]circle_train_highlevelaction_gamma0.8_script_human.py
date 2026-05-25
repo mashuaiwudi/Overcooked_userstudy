@@ -15,7 +15,9 @@ from stable_baselines3.common.logger import configure
 # 你需要修改的路径
 # =========================
 
-POLICY_POOL_PATH = r"../co_play_partner_pool_thinpath"
+# POLICY_POOL_PATH = r"../co_play_partner_pool_circle"
+
+POLICY_POOL_PATH = r"../final_policy_pool_circle_coplay"
 
 import gym_macro_overcooked
 from gym_macro_overcooked.items import (
@@ -66,24 +68,17 @@ macroActionDict = {
 }
 
 
-
 def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce):
 
     agent_up = env.agent[0]
     agent_down = env.agent[1]
 
 
-
-    counter1_x = 1
-    counter1_y = 3
-
-    counter2_x = 3
-    counter2_y = 3
-
+    counter1_x = 2
+    counter1_y = 2
 
 
     counter1 = ITEMNAME[env.map[counter1_x][counter1_y]]
-    counter2 = ITEMNAME[env.map[counter2_x][counter2_y]]
 
 
     reward_shaping_bonus = 0
@@ -95,7 +90,7 @@ def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_c
 
 
     """右侧high benevolence"""
-    counters = [counter1, counter2]
+    counters = [counter1]
 
 
 
@@ -126,8 +121,6 @@ def check_action_benevolence(env, action_up, action_down, firsttime_down_go_to_c
 
 
     return reward_bonus_up, reward_bonus_down, firsttime_down_go_to_counter, firsttime_up_get_counter_lettuce
-
-
 
 
 
@@ -258,7 +251,7 @@ class SingleAgentWrapper(gym.Wrapper):
     A wrapper to extract a single agent's perspective from a multi-agent environment.
     这里只训练一个 agent（通常是 agent0），另一个 agent 用已训练好的 policy。
     """
-    def __init__(self, env, agent_index, step_penalty_agent0, helping,
+    def __init__(self, env, agent_index, step_penalty_agent1, helping,
              other_agent_model=None, policy_pool=None):
         super(SingleAgentWrapper, self).__init__(env)
         self.agent_index = agent_index
@@ -266,7 +259,7 @@ class SingleAgentWrapper(gym.Wrapper):
         self.action_space = env.action_space
         self.other_agent_model = other_agent_model
 
-        self.step_penalty_agent0 = step_penalty_agent0
+        self.step_penalty_agent1 = step_penalty_agent1
 
         self.firsttime_down_go_to_counter = True
         self.firsttime_up_get_counter_lettuce = True
@@ -343,7 +336,7 @@ class SingleAgentWrapper(gym.Wrapper):
         agent0_current_location = [agents[0].x, agents[0].y]
         agent1_current_location = [agents[1].x, agents[1].y]
 
-        step_penalty = self.step_penalty_agent0
+        step_penalty = self.step_penalty_agent1
 
         if self.helping is True:
             if self.agent_index == 0:
@@ -442,8 +435,8 @@ def format_time(seconds: float) -> str:
     return f"{minutes}分{secs}秒"
 
 
-def train_one_combo(step_penalty_agent0: int, 
-                    helping0: bool, 
+def train_one_combo(step_penalty_agent1: int, 
+                    helping1: bool, 
                     policy_pool, policy_paths):
     rewardList = [{
         "minitask finished": 0,
@@ -477,14 +470,12 @@ def train_one_combo(step_penalty_agent0: int,
         "pick up bad lettuce": 0
     }]
 
-    mac_env_id = "Overcooked-MA-equilibrium-v3"
-
-
+    mac_env_id = "Overcooked-MA-equilibrium-v5"
     env_params = {
-        "grid_dim": [5, 7],
+        "grid_dim": [5, 5],
         "task": ["lettuce salad"],
         "rewardList": rewardList,
-        "map_type": "thinpath",
+        "map_type": "circle",
         "n_agent": 2,
         "obs_radius": 0,
         "mode": "vector",
@@ -492,8 +483,8 @@ def train_one_combo(step_penalty_agent0: int,
     }
 
     combo_tag = (
-        f"a0sp_{step_penalty_agent0}_"
-        f"helping0_{helping0}_"
+        f"a1sp_{step_penalty_agent1}_"
+        f"helping1_{helping1}_"
         f"gamma0.8"
     )
 
@@ -501,13 +492,13 @@ def train_one_combo(step_penalty_agent0: int,
     os.makedirs(log_dir, exist_ok=True)
     new_logger = configure(log_dir, ["csv", "tensorboard"])
 
-    save_dir_agent0 = os.path.join(
+    save_dir_agent1 = os.path.join(
         "final_trained_models",
-        f"[coplay][flexible][thinpath]agent0_{combo_tag}"
+        f"[coplay][flexible][circle]agent1_{combo_tag}"
     )
-    os.makedirs(save_dir_agent0, exist_ok=True)
+    os.makedirs(save_dir_agent1, exist_ok=True)
 
-    reward_callback_0 = EpisodeRewardCallback(save_dir_agent0, save_freq=100000)
+    reward_callback_1 = EpisodeRewardCallback(save_dir_agent1, save_freq=100000)
 
     shared_env = gym.make(mac_env_id, **env_params)
     shared_env.seed(SEED)
@@ -519,12 +510,12 @@ def train_one_combo(step_penalty_agent0: int,
         except Exception:
             pass
 
-    # 这里只训练 agent0，agent1 由 policy pool 提供
-    env_agent_0 = SingleAgentWrapper(
+    # 这里只训练 agent1 (human)，agent0 (robot) 由 policy pool 提供
+    env_agent_1 = SingleAgentWrapper(
         shared_env,
-        agent_index=0,
-        step_penalty_agent0=step_penalty_agent0,
-        helping=helping0,
+        agent_index=1,
+        step_penalty_agent1=step_penalty_agent1,
+        helping=helping1,
         other_agent_model=None,
         policy_pool=policy_pool   # 🔥 关键
     )
@@ -545,16 +536,16 @@ def train_one_combo(step_penalty_agent0: int,
 
     policy_kwargs = dict(net_arch=[dict(pi=[256, 128, 64], vf=[256, 128, 64])])
 
-    model_agent_0 = PPO(
+    model_agent_1 = PPO(
         "MlpPolicy",
-        env_agent_0,
+        env_agent_1,
         policy_kwargs=policy_kwargs,
         seed=SEED,
         device="cpu",
         **ppo_params0,
     )
 
-    model_agent_0.set_logger(new_logger)
+    model_agent_1.set_logger(new_logger)
 
     total_train_steps = 5_000_000
 
@@ -564,9 +555,9 @@ def train_one_combo(step_penalty_agent0: int,
 
 
 
-    model_agent_0.learn(
+    model_agent_1.learn(
         total_timesteps=total_train_steps,
-        callback=reward_callback_0
+        callback=reward_callback_1
     )
 
     phase_end_time = time.time()
@@ -579,16 +570,16 @@ def main():
     # 先统一加载一次 agent1 policy pool，后续所有组合复用
     policy_pool, policy_paths = load_policy_pool(POLICY_POOL_PATH)
 
-    helping0 = [True, False]
-    # helping1 = [True, False]
-    step_penalty_list_agent0 = [0, 1, 3]
-    # step_penalty_list_agent1 = [0, 1, 3]
+    # helping0 = [True, False]
+    helping1 = [True, False]
+    # step_penalty_list_agent0 = [0, 1, 3]
+    step_penalty_list_agent1 = [0, 1, 3]
 
-    for help_partner0 in helping0:
-        for sp0 in step_penalty_list_agent0:
+    for help_partner1 in helping1:
+        for sp1 in step_penalty_list_agent1:
             train_one_combo(
-                step_penalty_agent0=sp0,
-                helping0=help_partner0,
+                step_penalty_agent1=sp1,
+                helping1=help_partner1,
                 policy_pool=policy_pool,
                 policy_paths=policy_paths
             )

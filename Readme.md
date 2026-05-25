@@ -281,3 +281,14 @@ Be sure to update `gym_macro_overcooked/overcooked_MA_equilibrium_counter_flexib
 
 ### Change the `mac_env_id = 'Overcooked-MA-equilibrium-v3'` for `thinpath`
 ### Change the `mac_env_id = 'Overcooked-MA-equilibrium-v5'` for `circle`
+
+
+## 20260525: Add human policy pool (also trained via coplay)
+
+`final_policy_pool_HUMAN_circle_coplay`
+
+`final_policy_pool_HUMAN_counter_coplay`
+
+`final_policy_pool_HUMAN_thinpath_coplay`
+
+Each map folder containes 18 policies.
