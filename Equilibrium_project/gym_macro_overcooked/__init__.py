@@ -37,3 +37,9 @@ register(
     id='Overcooked-MA-equilibrium-v5',
     entry_point='gym_macro_overcooked.overcooked_MA_equilibrium_circle_flexible:Overcooked_MA_equilibrium_circle_flexible',
 )
+
+
+register(
+    id='Overcooked-MA-equilibrium-v6',
+    entry_point='gym_macro_overcooked.overcooked_MA_equilibrium_openspace_flexible:Overcooked_MA_equilibrium_openspace_flexible',
+)

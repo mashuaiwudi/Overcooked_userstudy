@@ -292,3 +292,24 @@ Be sure to update `gym_macro_overcooked/overcooked_MA_equilibrium_counter_flexib
 `final_policy_pool_HUMAN_thinpath_coplay`
 
 Each map folder containes 18 policies.
+
+# HOW WE TRAIN POLICIES
+- Use some parameters to train 324 AI policies (version1) and 324 human policies (version1). They are paired trained.
+- Use the version1 human policies to train 18 AI policies (version2). This time, we use co-play. For counter map, Danqing selected 62 human policies. For circle map, Danqing selected 62 human policies. For thinpath map, Danqing selected 53 policies. For openspace map, use the original 324 human policies.
+- These 18 AI policies (version2) are used for user study.
+- To test whether we can predict equilibrium, we use the version2 18 AI policies to train 18 human policies (version2) via co-play. Note that in this step, the version2 human policies can be trained using the original 324 AI policies (version1).
+- Finally, the equilibrium is predicted using 18 AI policies (version2) and 18 human policies (version2).
+
+## 20260627: Train policy pool on a new map "openspace"
+
+`final_policy_pool_openspace_coplay` contains the 18 AI policies.
+
+`final_policy_pool_HUMAN_openspace_coplay` contains the 18 human policies.
+
+### Be sure to update 3 files:
+- `gym_macro_overcooked/overcooked_MA_equilibrium_openspace_flexible.py`, 
+- `gym_macro_overcooked/overcooked_equilibrium.py`
+- `gym_macro_overcooked/__init__.py`
+
+### Change `mac_env_id` to `Overcooked-MA-equilibrium-v6`
+### Change `map_type` to `openspace`

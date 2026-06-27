@@ -203,67 +203,10 @@ env_agent_1 = SingleAgentWrapper(shared_env, agent_index=1)
 
 
 
-model_agent_0 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent0_a0sp_0_a1sp_0_helping_False_gamma0.8_0.8/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_False_gamma0.8_0.8/model_500000", env=env_agent_1)
+model_agent_0 = PPO.load("../final_policy_pool_thinpath_coplay/[coplay][flexible][thinpath]agent0_a0sp_3_helping0_False_gamma0.8/model_5000000", env=env_agent_0)
+model_agent_1 = PPO.load("../final_policy_pool_HUMAN_thinpath_coplay/[coplay][flexible][thinpath]agent1_a1sp_3_helping1_False_gamma0.8/model_5000000", env=env_agent_1)
 
 
-
-model_agent_0 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent0_a0sp_0_a1sp_0_helping_True_gamma0.8_0.8/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_True_gamma0.8_0.8/model_500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent0_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_newmap/[equilibrium][counter]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("final_trained_models/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1000000", env=env_agent_0)
-model_agent_1 = PPO.load("final_trained_models/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1000000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_False_gamma0.8_0.8/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_False_gamma0.8_0.8/model_1500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_1_a1sp_1_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_1_a1sp_1_helping_False_gamma0.95_0.95/model_1500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_0_a1sp_0_helping_False_gamma0.9_0.9/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_0_a1sp_0_helping_False_gamma0.9_0.9/model_1500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent0_a0sp_1_a1sp_5_helping_True_gamma0.9_0.8/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath/[equilibrium][thinpath]agent1_a0sp_1_a1sp_5_helping_True_gamma0.9_0.8/model_1500000", env=env_agent_1)
-
-
-
-model_agent_0 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent0_a0sp_1_a1sp_1_helping_False_gamma0.9_0.8/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent1_a0sp_1_a1sp_1_helping_False_gamma0.9_0.8/model_1500000", env=env_agent_1)
-
-model_agent_0 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent0_a0sp_0_a1sp_1_helping_False_gamma0.95_0.8/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent1_a0sp_0_a1sp_1_helping_False_gamma0.95_0.8/model_1500000", env=env_agent_1)
-
-model_agent_0 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent0_a0sp_1_a1sp_3_helping_False_gamma0.9_0.95/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent1_a0sp_1_a1sp_3_helping_False_gamma0.9_0.95/model_1500000", env=env_agent_1)
-
-model_agent_0 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent0_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent1_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent0_a0sp_0_a1sp_0_helping_True_gamma0.95_0.95/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent1_a0sp_0_a1sp_0_helping_False_gamma0.8_0.95/model_1500000", env=env_agent_1)
-
-
-model_agent_0 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent0_a0sp_0_a1sp_0_helping_False_gamma0.8_0.8/model_1500000", env=env_agent_0)
-model_agent_1 = PPO.load("../policy_pool_thinpath_new/[equilibrium][thinpath2]agent1_a0sp_1_a1sp_1_helping_False_gamma0.9_0.8/model_1500000", env=env_agent_1)
 # gamma, reward (helping)
 
 
